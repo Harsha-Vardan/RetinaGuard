@@ -1,0 +1,66 @@
+# RetinaGuard Baseline Model Configuration
+
+model:
+  architecture: "resnet18"
+  pretrained: true
+  pretrained_source: "torchvision_imagenet1k_v1"
+  num_classes: 5
+  dropout: 0.3
+  freeze_backbone: false  # Set true for initial feature extraction
+
+training:
+  # Data
+  image_size: [512, 512]
+  batch_size: 16
+  num_workers: 4
+
+  # Optimization
+  optimizer: "adam"
+  learning_rate: 0.0001
+  weight_decay: 0.0001
+  scheduler: "cosine"
+  scheduler_params:
+    T_max: 50
+    eta_min: 0.000001
+
+  # Training
+  epochs: 50
+  early_stopping:
+    enabled: true
+    patience: 10
+    monitor: "val_qwk"
+    mode: "max"
+
+  # Class imbalance
+  class_weights: "balanced"  # "balanced", "none", or explicit list
+
+  # Checkpointing
+  checkpoint_dir: checkpoints/experiments
+  save_best: true
+  save_last: true
+
+  # Reproducibility
+  seed: 42
+  deterministic: true
+
+  # Resource constraints
+  mixed_precision: false  # Not supported on CPU
+  gradient_accumulation_steps: 1
+
+  # Smoke test mode
+  smoke_test:
+    enabled: false
+    max_samples: 32
+    max_epochs: 2
+
+evaluation:
+  metrics:
+    - accuracy
+    - macro_f1
+    - per_class_precision
+    - per_class_recall
+    - per_class_sensitivity
+    - per_class_specificity
+    - confusion_matrix
+    - quadratic_weighted_kappa
+    - auroc

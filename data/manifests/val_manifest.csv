@@ -1,0 +1,8 @@
+image_id,image_path,dataset_id,dr_grade,original_label,hospital_id,camera_id,patient_id,eye,image_quality,gradable,lesion_mask_path,lesion_annotation_type,split,duplicate_group,label_status,preprocessing_version
+APTOS_aptos_0001,D:\Mini-project\data\raw\APTOS\train_images\aptos_0001.png,APTOS,0.0,0.0,,,,,,,,,val,,verified,
+APTOS_aptos_0003,D:\Mini-project\data\raw\APTOS\train_images\aptos_0003.png,APTOS,2.0,2.0,,,,,,,,,val,,verified,
+APTOS_aptos_000b,D:\Mini-project\data\raw\APTOS\train_images\aptos_000b.png,APTOS,0.0,0.0,,,,,,,,,val,,verified,
+APTOS_aptos_000c,D:\Mini-project\data\raw\APTOS\train_images\aptos_000c.png,APTOS,1.0,1.0,,,,,,,,,val,,verified,
+APTOS_aptos_000f,D:\Mini-project\data\raw\APTOS\train_images\aptos_000f.png,APTOS,4.0,4.0,,,,,,,,,val,,verified,
+IDRiD_IDRiD_004,D:\Mini-project\data\raw\IDRiD\A. Disease Grading\1. Original Images\a. Training Set\IDRiD_004.jpg,IDRiD,3.0,3.0,,,,,,,,,val,,verified,
+IDRiD_IDRiD_012,D:\Mini-project\data\raw\IDRiD\A. Disease Grading\1. Original Images\a. Training Set\IDRiD_012.jpg,IDRiD,1.0,1.0,,,,,,,,,val,,verified,

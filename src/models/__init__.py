@@ -1,0 +1,1 @@
+"""RetinaGuard model definitions."""

@@ -1,0 +1,50 @@
+# RetinaGuard Preprocessing Configuration
+
+preprocessing:
+  version: "1.0"
+
+  # Input
+  input_dir: data/raw
+  output_dir: data/processed
+  metadata_dir: data/metadata
+
+  # Retinal FOV detection and cropping
+  fov_detection:
+    enabled: true
+    threshold: 10  # Pixel intensity threshold for border detection
+    margin: 5      # Extra pixels to keep around detected FOV
+
+  # Resizing
+  resize:
+    enabled: true
+    target_size: [512, 512]  # Height, Width
+    interpolation: "INTER_AREA"  # For downscaling; INTER_LINEAR for upscaling
+    preserve_aspect_ratio: true
+    padding_color: [0, 0, 0]
+
+  # Illumination normalization
+  normalization:
+    enabled: true
+    method: "clahe"  # Contrast Limited Adaptive Histogram Equalization
+    clahe:
+      clip_limit: 2.0
+      tile_grid_size: [8, 8]
+    # Apply to L channel in LAB color space to preserve color relationships
+    color_space: "LAB"
+
+  # Quality assessment
+  quality:
+    enabled: true
+    min_dimension: 100
+    blur_threshold: 50.0  # Laplacian variance threshold
+    dark_threshold: 30    # Mean intensity below this = too dark
+    bright_threshold: 240 # Mean intensity above this = too bright
+
+  # Training augmentation
+  augmentation:
+    enabled: true
+    random_horizontal_flip: 0.5
+    random_rotation: 15  # degrees
+    brightness_range: [0.9, 1.1]
+    contrast_range: [0.9, 1.1]
+    # No aggressive color jitter — preserve lesion appearance

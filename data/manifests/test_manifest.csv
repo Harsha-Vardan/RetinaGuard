@@ -1,0 +1,9 @@
+image_id,image_path,dataset_id,dr_grade,original_label,hospital_id,camera_id,patient_id,eye,image_quality,gradable,lesion_mask_path,lesion_annotation_type,split,duplicate_group,label_status,preprocessing_version
+IDRiD_IDRiD_018,D:\Mini-project\data\raw\IDRiD\A. Disease Grading\1. Original Images\b. Testing Set\IDRiD_018.jpg,IDRiD,2.0,2.0,,,,,,,,,test,,verified,
+IDRiD_IDRiD_019,D:\Mini-project\data\raw\IDRiD\A. Disease Grading\1. Original Images\b. Testing Set\IDRiD_019.jpg,IDRiD,3.0,3.0,,,,,,,,,test,,verified,
+IDRiD_IDRiD_020,D:\Mini-project\data\raw\IDRiD\A. Disease Grading\1. Original Images\b. Testing Set\IDRiD_020.jpg,IDRiD,4.0,4.0,,,,,,,,,test,,verified,
+IDRiD_IDRiD_021,D:\Mini-project\data\raw\IDRiD\A. Disease Grading\1. Original Images\b. Testing Set\IDRiD_021.jpg,IDRiD,0.0,0.0,,,,,,,,,test,,verified,
+IDRiD_IDRiD_022,D:\Mini-project\data\raw\IDRiD\A. Disease Grading\1. Original Images\b. Testing Set\IDRiD_022.jpg,IDRiD,1.0,1.0,,,,,,,,,test,,verified,
+IDRiD_IDRiD_023,D:\Mini-project\data\raw\IDRiD\A. Disease Grading\1. Original Images\b. Testing Set\IDRiD_023.jpg,IDRiD,2.0,2.0,,,,,,,,,test,,verified,
+IDRiD_IDRiD_024,D:\Mini-project\data\raw\IDRiD\A. Disease Grading\1. Original Images\b. Testing Set\IDRiD_024.jpg,IDRiD,3.0,3.0,,,,,,,,,test,,verified,
+IDRiD_IDRiD_025,D:\Mini-project\data\raw\IDRiD\A. Disease Grading\1. Original Images\b. Testing Set\IDRiD_025.jpg,IDRiD,4.0,4.0,,,,,,,,,test,,verified,

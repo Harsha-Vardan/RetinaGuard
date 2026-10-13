@@ -1,0 +1,80 @@
+{
+  "IDRiD": {
+    "status": "VERIFIED",
+    "timestamp": "2026-10-13T21:33:49.230015",
+    "official_url": "https://idrid.grand-challenge.org/",
+    "license": "CC BY 4.0",
+    "local_path": "D:\\Mini-project\\data\\raw\\IDRiD",
+    "images_found": 25,
+    "labels_found": true,
+    "annotations_found": true,
+    "errors": [],
+    "user_actions_required": [],
+    "label_files": [
+      "D:\\Mini-project\\data\\raw\\IDRiD\\A. Disease Grading\\2. Groundtruths\\a. IDRiD_Disease Grading_Training Labels.csv",
+      "D:\\Mini-project\\data\\raw\\IDRiD\\A. Disease Grading\\2. Groundtruths\\b. IDRiD_Disease Grading_Testing Labels.csv"
+    ],
+    "masks_found": 13,
+    "annotation_files": 0,
+    "subdirectories": {
+      "a. Training Set": 17,
+      "b. Testing Set": 8
+    }
+  },
+  "APTOS": {
+    "status": "VERIFIED",
+    "timestamp": "2026-10-13T21:33:49.240007",
+    "official_url": "https://www.kaggle.com/competitions/aptos2019-blindness-detection",
+    "license": "Kaggle Competition Rules",
+    "local_path": "D:\\Mini-project\\data\\raw\\APTOS",
+    "images_found": 25,
+    "labels_found": true,
+    "annotations_found": false,
+    "errors": [],
+    "user_actions_required": [],
+    "label_files": [
+      "D:\\Mini-project\\data\\raw\\APTOS\\test.csv",
+      "D:\\Mini-project\\data\\raw\\APTOS\\train.csv"
+    ],
+    "masks_found": 0,
+    "annotation_files": 0,
+    "subdirectories": {
+      "test_images": 8,
+      "train_images": 17
+    }
+  },
+  "DDR": {
+    "status": "REQUIRES_MANUAL_APPROVAL",
+    "timestamp": "2026-10-13T21:33:49.244383",
+    "official_url": "https://github.com/nkicsl/DDR-dataset",
+    "license": "Research use",
+    "local_path": null,
+    "images_found": 0,
+    "labels_found": false,
+    "annotations_found": false,
+    "errors": [],
+    "user_actions_required": [
+      "Dataset DDR requires manual download:",
+      "  Official source: https://github.com/nkicsl/DDR-dataset",
+      "  Place files in: D:\\Mini-project\\data\\raw\\DDR",
+      "  Re-run download_datasets after placing the files."
+    ]
+  },
+  "EyePACS": {
+    "status": "REQUIRES_AUTHENTICATION",
+    "timestamp": "2026-10-13T21:33:49.250843",
+    "official_url": "https://www.kaggle.com/competitions/diabetic-retinopathy-detection",
+    "license": "Kaggle Competition Rules",
+    "local_path": null,
+    "images_found": 0,
+    "labels_found": false,
+    "annotations_found": false,
+    "errors": [],
+    "user_actions_required": [
+      "Create Kaggle API token: https://www.kaggle.com/settings -> API -> Create New Token",
+      "Save kaggle.json to C:\\Users\\User\\.kaggle\\kaggle.json",
+      "OR set KAGGLE_USERNAME and KAGGLE_KEY environment variables",
+      "Accept competition rules at: https://www.kaggle.com/competitions/diabetic-retinopathy-detection"
+    ]
+  }
+}

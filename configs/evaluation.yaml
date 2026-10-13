@@ -1,0 +1,41 @@
+# RetinaGuard Evaluation Configuration
+
+evaluation:
+  # Cross-domain evaluation protocol
+  protocols:
+    - name: "aptos_to_idrid"
+      description: "Train on APTOS, evaluate on IDRiD grading subset"
+      train_dataset: "APTOS"
+      val_dataset: "APTOS"
+      test_dataset: "IDRiD"
+      task: "disease_grading"
+
+    - name: "idrid_baseline"
+      description: "Train and evaluate on IDRiD with held-out test split"
+      train_dataset: "IDRiD"
+      val_dataset: "IDRiD"
+      test_dataset: "IDRiD"
+      task: "disease_grading"
+
+  # Metrics to compute
+  metrics:
+    - accuracy
+    - macro_f1
+    - per_class_precision
+    - per_class_recall
+    - per_class_sensitivity
+    - per_class_specificity
+    - confusion_matrix
+    - quadratic_weighted_kappa
+    - auroc
+
+  # Output
+  output_dir: outputs/reports
+  figures_dir: outputs/figures
+  predictions_dir: outputs/predictions
+
+  # Report generation
+  generate_confusion_matrix: true
+  generate_roc_curves: true
+  generate_per_class_report: true
+  save_predictions: true
