@@ -74,7 +74,9 @@ Mini-project/
 | **Phase F** | Cross-Domain Evaluation | ✅ Verified | In-domain vs. cross-domain evaluation, confusion matrix heatmaps |
 | **Phase G** | Research Innovations | ✅ Verified | Lesion-guided attention & causal representation disentanglement models verified |
 | **Phase H** | RetinaGuard Multi-Task Trainer | ✅ Verified | Joint loss minimization (Disease, Lesion BCE, Domain GRL, Covariance Penalty) |
-| **Phase I** | Unit Test Suite | ✅ Verified | **21/21 PyTest tests passing** across models, research architectures & data |
+| **Phase I** | Explainability & Attribution | ✅ Verified | Grad-CAM, Lesion Attention maps, Attribution IoU/Dice, multi-panel overlay figures |
+| **Phase J** | Comparative Benchmark | ✅ Verified | Automated head-to-head comparison, confusion matrices, and markdown/JSON reports |
+| **Phase K** | Unit Test Suite | ✅ Verified | **27/27 PyTest tests passing** across all modules and research architectures |
 
 ---
 
