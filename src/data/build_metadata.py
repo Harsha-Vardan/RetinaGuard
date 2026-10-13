@@ -110,73 +110,114 @@ class MetadataBuilder:
 
     def _process_idrid(self, dataset_dir: Path) -> list[dict]:
         """Process IDRiD dataset into metadata records."""
+        import re
         records = []
 
-        # Find grading labels
-        label_files = list(dataset_dir.rglob("*.csv"))
-        grading_labels = {}
+        # 1. Locate grading directory
+        grading_dir = dataset_dir / "B. Disease Grading"
+        if not grading_dir.exists():
+            for p in dataset_dir.iterdir():
+                if p.is_dir() and "grading" in p.name.lower():
+                    grading_dir = p
+                    break
+            else:
+                grading_dir = dataset_dir
 
-        for lf in label_files:
+        seg_dir = dataset_dir / "A. Segmentation"
+        if not seg_dir.exists():
+            for p in dataset_dir.iterdir():
+                if p.is_dir() and "segmentation" in p.name.lower():
+                    seg_dir = p
+                    break
+            else:
+                seg_dir = dataset_dir
+
+        # 2. Index lesion segmentation masks from segmentation directory
+        masks_map: dict[tuple[str, int], list[Path]] = {}
+        mask_stem_index: dict[str, Path] = {}
+        if seg_dir.exists():
+            for m in seg_dir.rglob("*.tif"):
+                split = "train" if "training" in str(m).lower() else "test"
+                num_match = re.search(r"\d+", m.stem)
+                if num_match:
+                    num = int(num_match.group())
+                    masks_map.setdefault((split, num), []).append(m)
+                mask_stem_index[m.stem] = m
+
+        # 3. Read grading labels separated by split
+        grading_labels: dict[tuple[str, str], int] = {}
+        for lf in dataset_dir.rglob("*.csv"):
+            if "grading" not in lf.name.lower() and "disease" not in lf.name.lower() and "label" not in lf.name.lower():
+                continue
+            split = "train" if "train" in lf.name.lower() else ("test" if "test" in lf.name.lower() else "unknown")
             try:
                 df = pd.read_csv(lf)
-                # IDRiD grading CSV typically has: Image name, Retinopathy grade, Risk of macular edema
-                name_cols = [c for c in df.columns if "image" in c.lower() or "name" in c.lower() or "id" in c.lower()]
-                grade_cols = [c for c in df.columns if any(
-                    kw in c.lower() for kw in ["retinopathy", "grade", "dr", "level"]
-                )]
-
+                name_cols = [c for c in df.columns if any(kw in c.lower() for kw in ["image", "name", "id"])]
+                grade_cols = [c for c in df.columns if any(kw in c.lower() for kw in ["retinopathy", "grade", "dr", "level"])]
                 if name_cols and grade_cols:
                     for _, row in df.iterrows():
                         img_id = str(row[name_cols[0]]).strip()
                         grade = row[grade_cols[0]]
                         try:
-                            grading_labels[img_id] = int(grade)
+                            g_int = int(grade)
+                            if split != "unknown":
+                                grading_labels[(split, img_id)] = g_int
+                            grading_labels[("any", img_id)] = g_int
                         except (ValueError, TypeError):
                             pass
-                    logger.info(f"  Found {len(grading_labels)} grading labels in {lf.name}")
+                    logger.info(f"  Found {len(df)} labels in {lf.name}")
             except Exception as e:
                 logger.warning(f"  Error reading {lf.name}: {e}")
 
-        # Find images
+        # 4. Find images from grading directory
         image_extensions = {".jpg", ".jpeg", ".png", ".tif", ".tiff"}
-        all_images = [
-            f for f in dataset_dir.rglob("*")
+        search_root = grading_dir / "1. Original Images" if (grading_dir / "1. Original Images").exists() else grading_dir
+        candidate_images = [
+            f for f in search_root.rglob("*")
             if f.is_file() and f.suffix.lower() in image_extensions
         ]
 
-        # Separate images from masks
         images = []
-        mask_index = {}  # stem -> path
-
-        for img in all_images:
+        for img in candidate_images:
             path_lower = str(img).lower()
-            if any(kw in path_lower for kw in [
-                "mask", "segmentation", "groundtruth", "ground_truth",
-                "lesion", "annotation"
-            ]):
-                mask_index[img.stem] = img
-            else:
-                images.append(img)
+            if any(kw in path_lower for kw in ["mask", "groundtruth", "ground_truth", "annotation"]):
+                continue
+            images.append(img)
 
+        # 5. Build records
         for img_path in images:
             stem = img_path.stem
+            split = "train" if "training" in str(img_path).lower() else ("test" if "testing" in str(img_path).lower() else self._infer_split_from_path(img_path))
+            dr_grade = grading_labels.get((split, stem), grading_labels.get(("any", stem)))
+
+            num_match = re.search(r"\d+", stem)
+            assigned_mask = None
+            if num_match:
+                num = int(num_match.group())
+                matched_masks = masks_map.get((split, num), [])
+                if matched_masks:
+                    ma_masks = [m for m in matched_masks if "_ma" in m.name.lower()]
+                    assigned_mask = str(ma_masks[0]) if ma_masks else str(matched_masks[0])
+            if not assigned_mask and stem in mask_stem_index:
+                assigned_mask = str(mask_stem_index[stem])
+
             record = {
-                "image_id": f"IDRiD_{stem}",
+                "image_id": f"IDRiD_{split}_{stem}",
                 "image_path": str(img_path),
                 "dataset_id": "IDRiD",
-                "original_label": grading_labels.get(stem),
-                "dr_grade": grading_labels.get(stem),
-                "hospital_id": None,
-                "camera_id": None,
+                "original_label": dr_grade,
+                "dr_grade": dr_grade,
+                "hospital_id": "eye_clinic_nanded",
+                "camera_id": "kowa_vx_10alpha",
                 "patient_id": None,
                 "eye": None,
-                "image_quality": None,
-                "gradable": None,
-                "lesion_mask_path": str(mask_index[stem]) if stem in mask_index else None,
-                "lesion_annotation_type": "segmentation" if stem in mask_index else None,
-                "split": self._infer_split_from_path(img_path),
+                "image_quality": "good",
+                "gradable": True,
+                "lesion_mask_path": assigned_mask,
+                "lesion_annotation_type": "segmentation" if assigned_mask else None,
+                "split": split,
                 "duplicate_group": None,
-                "label_status": "verified" if stem in grading_labels else "missing",
+                "label_status": "verified" if dr_grade is not None else "missing",
                 "preprocessing_version": None,
             }
             records.append(record)

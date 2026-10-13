@@ -1,19 +1,19 @@
 # Dataset Acquisition Report
 
-Generated: 2026-10-13 21:33:50
+Generated: 2026-10-13 22:05:55
 
 ## IDRiD ✅
 - **Status**: `VERIFIED`
 - **Official URL**: https://idrid.grand-challenge.org/
 - **License**: CC BY 4.0
 - **Local path**: `D:\Mini-project\data\raw\IDRiD`
-- **Images found**: 25
+- **Images found**: 1032
 - **Labels found**: True
 - **Annotations found**: True
-- **Masks found**: 13
+- **Masks found**: 444
 - **Subdirectories**:
-  - `a. Training Set`: 17 images
-  - `b. Testing Set`: 8 images
+  - `a. Training Set`: 826 images
+  - `b. Testing Set`: 206 images
 
 ## APTOS ✅
 - **Status**: `VERIFIED`

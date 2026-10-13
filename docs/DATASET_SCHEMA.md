@@ -1,8 +1,8 @@
 # Dataset Schema Documentation
 
-Generated: 2026-10-13 21:35:55
+Generated: 2026-10-13 22:04:48
 
-Total records: 50
+Total records: 541
 
 ## Column Descriptions
 
@@ -50,12 +50,12 @@ Total records: 50
   - Grade 4: 3
 
 ### IDRiD
-- Records: 25
-- With labels: 25
-- With masks: 0
+- Records: 516
+- With labels: 516
+- With masks: 81
 - Grade distribution:
-  - Grade 0: 5
-  - Grade 1: 5
-  - Grade 2: 5
-  - Grade 3: 5
-  - Grade 4: 5
+  - Grade 0: 168
+  - Grade 1: 25
+  - Grade 2: 168
+  - Grade 3: 93
+  - Grade 4: 62

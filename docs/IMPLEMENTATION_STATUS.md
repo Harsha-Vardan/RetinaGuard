@@ -18,7 +18,7 @@ Mini-project/
 │   ├── evaluation.yaml               # Cross-domain protocol
 │   └── preprocessing.yaml            # Retinal FOV, CLAHE, resizing settings
 ├── data/
-│   ├── raw/                          # Raw datasets (IDRiD, APTOS, DDR, EyePACS)
+│   ├── raw/                          # Raw datasets (Real IDRiD: 516 images + 444 masks; APTOS)
 │   ├── processed/                    # Standardized 512x512 CLAHE normalized images
 │   ├── manifests/                    # train/val/test split manifests
 │   └── metadata/                     # master_metadata.csv & acquisition status
@@ -45,14 +45,18 @@ Mini-project/
 │   ├── inference/
 │   │   └── predict.py                # Single/batch image inference CLI
 │   ├── models/
-│   │   └── baseline.py               # ResNet18 / EfficientNet / MobileNetV3 backbones
+│   │   ├── baseline.py               # ResNet18 / EfficientNet / MobileNetV3 backbones
+│   │   ├── lesion_guided.py          # Spatial lesion attention with auxiliary supervision
+│   │   ├── causal_disentangler.py    # GRL adversarial invariance & covariance independence
+│   │   └── retinaguard.py            # Unified end-to-end research model
 │   ├── training/
-│   │   └── train_baseline.py         # PyTorch training loop, checkpoints, early stopping
+│   │   ├── train_baseline.py         # Baseline PyTorch training loop & early stopping
+│   │   └── train_retinaguard.py      # Multi-task research training pipeline
 │   └── utils/
 │       ├── checkpointing.py          # Atomic checkpoint save/load
 │       ├── logging.py                # Windows cp1252-safe logging
 │       └── reproducibility.py        # Seed management & hardware profiling
-├── tests/                            # PyTest unit test suite
+├── tests/                            # PyTest unit test suite (21 unit tests)
 └── pyproject.toml                    # Package metadata & test configuration
 ```
 
@@ -63,48 +67,42 @@ Mini-project/
 | Phase | Component | Status | Verification Result |
 |---|---|---|---|
 | **Phase A** | Workspace Discovery | ✅ Verified | Intel Core i5, 16GB RAM, Windows 11, PyTorch CPU |
-| **Phase B** | Dataset Acquisition Manager | ✅ Verified | Automated search, checksum, extraction, and instructions for IEEE DataPort & Kaggle |
-| **Phase C** | Dataset Audit Module | ✅ Verified | Discovered images, label CSVs, masks, dimensions; 0 corrupt files |
+| **Phase B** | Dataset Acquisition Manager | ✅ Verified | Discovered & ingested real IDRiD dataset from Downloads (516 grading images, 444 masks) |
+| **Phase C** | Dataset Audit Module | ✅ Verified | Audited real IDRiD images & masks: verified dimensions, labels, and quality flags |
 | **Phase D** | Preprocessing Pipeline | ✅ Verified | Retinal FOV detection, CLAHE in LAB space, aspect-ratio padding to 512x512 |
 | **Phase E** | Baseline Classification | ✅ Verified | ResNet18 trained, best model checkpoint saved, curves plotted, QWK computed |
 | **Phase F** | Cross-Domain Evaluation | ✅ Verified | In-domain vs. cross-domain evaluation, confusion matrix heatmaps |
-| **Phase G** | Inference CLI | ✅ Verified | `src.inference.predict` outputs grade, description & softmax distribution |
-| **Phase H** | Unit Test Suite | ✅ Verified | 14/14 PyTest tests passing across metrics, models, preprocessing & splits |
+| **Phase G** | Research Innovations | ✅ Verified | Lesion-guided attention & causal representation disentanglement models verified |
+| **Phase H** | RetinaGuard Multi-Task Trainer | ✅ Verified | Joint loss minimization (Disease, Lesion BCE, Domain GRL, Covariance Penalty) |
+| **Phase I** | Unit Test Suite | ✅ Verified | **21/21 PyTest tests passing** across models, research architectures & data |
 
 ---
 
 ## 3. Quickstart CLI Guide
 
-### 1. Run Pipeline End-to-End
+### 1. Training the Unified RetinaGuard Framework
 ```bash
-# Generate mock dataset for local smoke testing
-python -m src.data.create_mock_data --num-idrid 25 --num-aptos 25
+# Run RetinaGuard multi-task smoke test on local CPU
+python -m src.training.train_retinaguard --smoke-test
 
-# Audit raw datasets
-python -m src.data.audit_dataset
+# Full multi-task training
+python -m src.training.train_retinaguard --epochs 30 --batch-size 16
+```
 
+### 2. Running Baseline Pipeline
+```bash
 # Build unified metadata
 python -m src.data.build_metadata
 
-# Create train/val/test splits
+# Stratify train / val / test
 python -m src.data.split_data
 
-# Run preprocessing
-python -m src.data.preprocessing
-
-# Run baseline training smoke test
+# Train baseline
 python -m src.training.train_baseline --smoke-test
 
-# Run single image prediction
-python -m src.inference.predict --image path/to/image.jpg --checkpoint experiments/baseline/<exp_id>/best_model.pth
-
-# Run cross-domain evaluation
+# Cross-domain evaluation
 python -m src.evaluation.evaluate_cross_domain --source-dataset IDRiD
 
 # Run test suite
 pytest tests -v
 ```
-
-### 2. Acquiring Real Datasets
-- **IDRiD**: Download `A. Disease Grading`, `B. Localization`, `C. Segmentation` from [IEEE DataPort](https://idrid.grand-challenge.org/) into `data/raw/IDRiD/`
-- **APTOS**: Place `kaggle.json` into `C:\Users\<User>\.kaggle\kaggle.json` or set `KAGGLE_USERNAME` & `KAGGLE_KEY`, then run `python -m src.data.download_datasets --dataset APTOS`
