@@ -1,4 +1,12 @@
 image_id,image_path,dataset_id,dr_grade,original_label,hospital_id,camera_id,patient_id,eye,image_quality,gradable,lesion_mask_path,lesion_annotation_type,split,duplicate_group,label_status,preprocessing_version
+APTOS_aptos_0012,D:\Mini-project\RetinaGuard\data\raw\APTOS\test_images\aptos_0012.png,APTOS,0.0,0.0,,,,,,,,,test,,verified,
+APTOS_aptos_0013,D:\Mini-project\RetinaGuard\data\raw\APTOS\test_images\aptos_0013.png,APTOS,0.0,0.0,,,,,,,,,test,,verified,
+APTOS_aptos_0014,D:\Mini-project\RetinaGuard\data\raw\APTOS\test_images\aptos_0014.png,APTOS,0.0,0.0,,,,,,,,,test,,verified,
+APTOS_aptos_0015,D:\Mini-project\RetinaGuard\data\raw\APTOS\test_images\aptos_0015.png,APTOS,0.0,0.0,,,,,,,,,test,,verified,
+APTOS_aptos_0016,D:\Mini-project\RetinaGuard\data\raw\APTOS\test_images\aptos_0016.png,APTOS,0.0,0.0,,,,,,,,,test,,verified,
+APTOS_aptos_0017,D:\Mini-project\RetinaGuard\data\raw\APTOS\test_images\aptos_0017.png,APTOS,0.0,0.0,,,,,,,,,test,,verified,
+APTOS_aptos_0018,D:\Mini-project\RetinaGuard\data\raw\APTOS\test_images\aptos_0018.png,APTOS,0.0,0.0,,,,,,,,,test,,verified,
+APTOS_aptos_0019,D:\Mini-project\RetinaGuard\data\raw\APTOS\test_images\aptos_0019.png,APTOS,0.0,0.0,,,,,,,,,test,,verified,
 IDRiD_test_IDRiD_001,D:\Mini-project\RetinaGuard\data\raw\IDRiD\B. Disease Grading\1. Original Images\b. Testing Set\IDRiD_001.jpg,IDRiD,4.0,4.0,eye_clinic_nanded,kowa_vx_10alpha,,,good,True,,,test,,verified,
 IDRiD_test_IDRiD_002,D:\Mini-project\RetinaGuard\data\raw\IDRiD\B. Disease Grading\1. Original Images\b. Testing Set\IDRiD_002.jpg,IDRiD,4.0,4.0,eye_clinic_nanded,kowa_vx_10alpha,,,good,True,,,test,,verified,
 IDRiD_test_IDRiD_003,D:\Mini-project\RetinaGuard\data\raw\IDRiD\B. Disease Grading\1. Original Images\b. Testing Set\IDRiD_003.jpg,IDRiD,4.0,4.0,eye_clinic_nanded,kowa_vx_10alpha,,,good,True,,,test,,verified,

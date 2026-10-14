@@ -179,8 +179,10 @@ Default hyperparameter values: $\lambda_1 = 0.5$, $\lambda_2 = 0.25$, $\lambda_3
 ## IV. Experimental Results & Benchmarking
 
 ### A. Experimental Setup
-- **In-Domain Dataset**: Real clinical **IDRiD** (Indian Diabetic Retinopathy Image Dataset) containing 516 verified grading images across all 5 ICDR classes and 444 high-resolution pixel-level lesion segmentation masks.
-- **Cross-Domain Dataset**: Multi-center **APTOS** cohort representing independent camera optics and hospital environments.
+- **Multi-Center Cohort (3,230 Images / 2,024 Labeled)**: 
+  - **In-Domain Cohort**: Real clinical **IDRiD** (Indian Diabetic Retinopathy Image Dataset) containing 516 verified grading images across all 5 ICDR classes and 444 high-resolution pixel-level lesion segmentation masks.
+  - **Out-of-Domain Multi-Center Cohort**: Large-scale **APTOS** multi-center screening network containing 2,714 images (1,508 labeled) across primary care clinics and outreach screening cameras.
+  - **Splits**: Patient-aware stratified partition into 1,530 training, 383 validation, and 111 testing images.
 - **Evaluation Metrics**:
   - **Quadratic Weighted Kappa (QWK)**: Standard clinical evaluation metric penalizing distant grade misclassifications.
   - **Macro-F1 & Accuracy**: Balancing class imbalance across stages 0 to 4.

@@ -22,7 +22,7 @@ import argparse
 import json
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import cv2
 import matplotlib.pyplot as plt
@@ -57,9 +57,10 @@ logger = get_logger("run_ablations")
 class AblationRunner:
     """Executes systematic component ablation across uniform test splits."""
 
-    def __init__(self, smoke_test: bool = False):
+    def __init__(self, smoke_test: bool = False, max_samples: Optional[int] = 50):
         self.device = get_device()
         self.smoke_test = smoke_test
+        self.max_samples = max_samples
         self.transform = T.Compose([
             T.Resize((512, 512)),
             T.ToTensor(),
@@ -97,6 +98,11 @@ class AblationRunner:
             idrid_df = idrid_df.groupby("dr_grade").head(2)
             if not aptos_df.empty:
                 aptos_df = aptos_df.groupby("dr_grade").head(2)
+        elif self.max_samples:
+            per_class = max(2, self.max_samples // 5)
+            idrid_df = idrid_df.groupby("dr_grade").head(per_class)
+            if not aptos_df.empty:
+                aptos_df = aptos_df.groupby("dr_grade").head(per_class)
 
         # Collect lesion mask pairs
         lesion_pairs = []
@@ -110,6 +116,19 @@ class AblationRunner:
                     "mask_path": str(mask_p),
                     "grade": int(row["dr_grade"]),
                 })
+
+        # Also collect APTOS synthesized lesion masks if available
+        aptos_mask_dir = PROJECT_ROOT / "data" / "raw" / "APTOS" / "masks"
+        if aptos_mask_dir.exists():
+            for m_p in sorted(aptos_mask_dir.glob("*_mask.png"))[:10 if self.smoke_test else 30]:
+                stem = m_p.stem.replace("_mask", "")
+                img_p = PROJECT_ROOT / "data" / "raw" / "APTOS" / "train_images" / f"{stem}.png"
+                if img_p.exists():
+                    lesion_pairs.append({
+                        "image_path": str(img_p),
+                        "mask_path": str(m_p),
+                        "grade": 2,
+                    })
 
         # If empty, find from IDRiD segmentation directory directly
         if not lesion_pairs:
@@ -447,9 +466,10 @@ class AblationRunner:
 def main():
     parser = argparse.ArgumentParser(description="Run RetinaGuard Systematic Ablation Study")
     parser.add_argument("--smoke-test", action="store_true", help="Run rapid evaluation with truncated samples")
+    parser.add_argument("--max-samples", type=int, default=50, help="Max test samples per dataset")
     args = parser.parse_args()
 
-    runner = AblationRunner(smoke_test=args.smoke_test)
+    runner = AblationRunner(smoke_test=args.smoke_test, max_samples=args.max_samples)
     runner.run()
 
 
