@@ -36,8 +36,7 @@ from PIL import Image
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from src.evaluation.benchmark_comparison import compute_referable_dr_metrics
-from src.evaluation.metrics import compute_dr_metrics
+from src.evaluation.metrics import compute_dr_metrics, compute_referable_dr_metrics
 from src.explainability.attribution import (
     GradCAM,
     compute_attribution_dice,

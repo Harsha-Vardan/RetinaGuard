@@ -71,3 +71,46 @@ def test_format_metrics_report():
     assert "Test Report" in report_str
     assert "Accuracy" in report_str
     assert "QWK" in report_str
+
+
+def test_compute_referable_dr_metrics():
+    """Verify referable DR sensitivity at target specificity calculation."""
+    from src.evaluation.metrics import compute_referable_dr_metrics
+
+    # 10 samples: 5 non-referable (grades 0, 1), 5 referable (grades 2, 3, 4)
+    y_true = np.array([0, 0, 1, 1, 1, 2, 2, 3, 3, 4])
+
+    # Well-separated probabilities
+    y_prob = np.zeros((10, 5))
+    for i in range(5):
+        y_prob[i, 0] = 0.8
+        y_prob[i, 1] = 0.2
+    for i in range(5, 10):
+        y_prob[i, 2] = 0.5
+        y_prob[i, 3] = 0.3
+        y_prob[i, 4] = 0.2
+
+    ref_metrics = compute_referable_dr_metrics(y_true, y_prob, target_specificity=0.90)
+    assert "referable_sens_at_90_spec" in ref_metrics
+    assert "referable_achieved_spec" in ref_metrics
+    assert ref_metrics["referable_sens_at_90_spec"] == 1.0
+    assert ref_metrics["referable_achieved_spec"] >= 0.90
+
+
+def test_save_metrics_io(tmp_path):
+    """Verify save_metrics writes valid JSON file that can be parsed."""
+    import json
+    from src.evaluation.metrics import save_metrics
+
+    dummy_metrics = {"accuracy": 0.88, "qwk": 0.85, "samples": 100}
+    json_path = tmp_path / "subdir" / "metrics.json"
+
+    save_metrics(dummy_metrics, json_path)
+    assert json_path.exists()
+
+    with open(json_path, "r", encoding="utf-8") as f:
+        loaded = json.load(f)
+
+    assert loaded["accuracy"] == 0.88
+    assert loaded["qwk"] == 0.85
+

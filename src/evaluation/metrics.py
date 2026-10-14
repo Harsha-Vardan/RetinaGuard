@@ -17,6 +17,7 @@ from sklearn.metrics import (
     confusion_matrix,
     cohen_kappa_score,
     roc_auc_score,
+    roc_curve,
     classification_report,
 )
 
@@ -28,6 +29,43 @@ DR_GRADE_NAMES = {
     3: "Severe",
     4: "Proliferative",
 }
+
+
+def compute_referable_dr_metrics(
+    y_true: np.ndarray,
+    y_prob: np.ndarray,
+    target_specificity: float = 0.90,
+) -> dict[str, float]:
+    """Compute referable DR (Grade >= 2) metrics including sensitivity at target specificity.
+
+    Args:
+        y_true: Ground truth integer class labels (N,).
+        y_prob: Predicted probability array of shape (N, num_classes).
+        target_specificity: Desired specificity threshold (default 0.90).
+
+    Returns:
+        Dictionary with sensitivity at target specificity and achieved specificity.
+    """
+    binary_true = (np.asarray(y_true) >= 2).astype(int)
+    # Sum of probabilities for Grades 2, 3, 4
+    referable_prob = np.sum(np.asarray(y_prob)[:, 2:], axis=1)
+
+    fpr, tpr, thresholds = roc_curve(binary_true, referable_prob)
+
+    spec = 1.0 - fpr
+    valid_idx = np.where(spec >= target_specificity)[0]
+    if len(valid_idx) > 0:
+        best_idx = valid_idx[np.argmax(tpr[valid_idx])]
+        sens_at_target = float(tpr[best_idx])
+        achieved_spec = float(spec[best_idx])
+    else:
+        sens_at_target = float(tpr[0])
+        achieved_spec = float(spec[0])
+
+    return {
+        "referable_sens_at_90_spec": round(sens_at_target, 4),
+        "referable_achieved_spec": round(achieved_spec, 4),
+    }
 
 
 def compute_dr_metrics(

@@ -34,7 +34,11 @@ from sklearn.metrics import roc_curve
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from src.evaluation.metrics import compute_dr_metrics, DR_GRADE_NAMES
+from src.evaluation.metrics import (
+    compute_dr_metrics,
+    compute_referable_dr_metrics,
+    DR_GRADE_NAMES,
+)
 from src.explainability.attribution import (
     GradCAM,
     extract_lesion_attention_map,
@@ -48,37 +52,6 @@ from src.utils.logging import get_logger
 from src.utils.reproducibility import get_device
 
 logger = get_logger("benchmark_comparison")
-
-
-def compute_referable_dr_metrics(
-    y_true: np.ndarray,
-    y_prob: np.ndarray,
-    target_specificity: float = 0.90,
-) -> Dict[str, float]:
-    """Compute referable DR (Grade >= 2) metrics including sensitivity at target specificity."""
-    # Referable DR binary target
-    binary_true = (y_true >= 2).astype(int)
-    # Sum of probabilities for Grades 2, 3, 4
-    referable_prob = np.sum(y_prob[:, 2:], axis=1)
-
-    fpr, tpr, thresholds = roc_curve(binary_true, referable_prob)
-
-    # Specificity = 1 - FPR. Find threshold where Specificity >= target_specificity
-    spec = 1.0 - fpr
-    valid_idx = np.where(spec >= target_specificity)[0]
-    if len(valid_idx) > 0:
-        # Highest TPR (sensitivity) among points meeting specificity threshold
-        best_idx = valid_idx[np.argmax(tpr[valid_idx])]
-        sens_at_target = float(tpr[best_idx])
-        achieved_spec = float(spec[best_idx])
-    else:
-        sens_at_target = float(tpr[0])
-        achieved_spec = float(spec[0])
-
-    return {
-        "referable_sens_at_90_spec": round(sens_at_target, 4),
-        "referable_achieved_spec": round(achieved_spec, 4),
-    }
 
 
 class BenchmarkEvaluator:

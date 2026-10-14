@@ -10,11 +10,11 @@ from src.data.split_data import create_splits
 def dummy_metadata_csv(tmp_path):
     """Create a temporary dummy metadata CSV."""
     data = {
-        "image_id": [f"img_{i:03d}" for i in range(30)],
-        "dr_grade": [i % 5 for i in range(30)],
-        "patient_id": [f"patient_{i // 2:02d}" for i in range(30)],
-        "label_status": ["verified"] * 28 + ["excluded", "excluded"],
-        "split": [None] * 30,
+        "image_id": [f"img_{i:03d}" for i in range(50)],
+        "dr_grade": [i % 5 for i in range(50)],
+        "patient_id": [f"patient_{i // 2:02d}" for i in range(50)],
+        "label_status": ["verified"] * 48 + ["excluded", "excluded"],
+        "split": [None] * 50,
     }
     df = pd.DataFrame(data)
     csv_path = tmp_path / "metadata.csv"
@@ -52,4 +52,4 @@ def test_create_splits(dummy_metadata_csv, tmp_path):
     assert len(train_df) > 0
     assert len(val_df) > 0
     assert len(test_df) > 0
-    assert len(train_df) + len(val_df) + len(test_df) == 28
+    assert len(train_df) + len(val_df) + len(test_df) == 48

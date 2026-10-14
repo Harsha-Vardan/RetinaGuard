@@ -12,7 +12,7 @@ from src.explainability.attribution import (
     compute_attribution_dice,
     generate_explanation_figure,
 )
-from src.evaluation.benchmark_comparison import compute_referable_dr_metrics
+from src.evaluation.metrics import compute_referable_dr_metrics
 from src.inference.predict import DRPredictor
 from src.models.retinaguard import RetinaGuardModel
 
