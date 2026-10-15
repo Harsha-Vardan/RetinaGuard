@@ -4,8 +4,8 @@
 
 [![Python Version](https://img.shields.io/badge/Python-3.10%20%7C%203.11%20%7C%203.12-blue?logo=python)](https://www.python.org/)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-EE4C2C?logo=pytorch&logoColor=white)](https://pytorch.org/)
-[![Tests](https://img.shields.io/badge/Tests-21%2F21%20Passed-brightgreen?logo=pytest)](file:///D:/Mini-project/RetinaGuard/tests)
-[![Dataset](https://img.shields.io/badge/Clinical%20Data-IDRiD%20%2B%20APTOS-orange)](file:///D:/Mini-project/RetinaGuard/data)
+[![Tests](https://img.shields.io/badge/Tests-110%2F110%20Passed-brightgreen?logo=pytest)](file:///D:/Mini-project/RetinaGuard/tests)
+[![Clinical Cohorts](https://img.shields.io/badge/Evaluated%20Cohorts-IDRiD%20%28Lesions%29%20%2B%20APTOS%20%28Transfer%29-orange)](file:///D:/Mini-project/RetinaGuard/data)
 [![License](https://img.shields.io/badge/License-MIT%20%2F%20Research-purple)](#license)
 [![Status](https://img.shields.io/badge/Status-Active%20Research-success)]()
 
@@ -173,17 +173,26 @@ RetinaGuard/
 
 ---
 
-## Clinical Datasets
+## Clinical Datasets & Evaluation Scope
 
-RetinaGuard supports multi-center training and cross-domain validation:
+RetinaGuard is evaluated across real-world clinical fundus cohorts with clear role division between lesion supervision and domain generalization:
 
-| Dataset | Modality | Samples | Lesion Annotations | Source | Status |
-|:---|:---|:---:|:---:|:---|:---:|
-| **IDRiD** | Digital Fundus | 516 | **444 Clinical Masks** (MA, HE, EX, SE) | IEEE DataPort | **Ingested & Audited** |
-| **APTOS 2019** | Fundus Photography | 3,662 | Image-level 5-class DR labels | Kaggle | **Ingested** |
-| **DDR** | Multi-hospital Fundus | 13,673 | Pixel-level lesion masks | Open Science | Configured |
-| **EyePACS** | Large-scale Screening | 88,702 | 5-class DR grading | Kaggle / EyePACS | Configured |
-| **Messidor-2** | Multi-clinic Screening | 1,748 | Adjudicated DR + DME | Messidor | Configured |
+### 1. Active & Evaluated Cohorts (Present Locally in `data/raw/`)
+
+| Dataset | Modality | Samples | Annotations | Evaluation Role in Paper | Status |
+|:---|:---|:---:|:---|:---|:---:|
+| **IDRiD** | Digital Fundus (Kowa VX-10α) | 516 | **444 Clinical Masks** (MA, HE, EX, SE) + 5-Class Grades | **Primary Benchmark & Lesion Supervision**: Used for spatial lesion attention training, cross-validation, and all attribution grounding metrics (IoU, Dice, Pointing Game Hit Rate). | **Active on Disk & Evaluated** |
+| **APTOS 2019** | Multi-Center Photography | 3,662 (1,508 labeled) | Image-level 5-class DR grades | **Cross-Domain Generalization**: Used as the out-of-distribution transfer cohort to evaluate leave-one-center-out resilience without fine-tuning. *(Note: APTOS has no lesion masks).* | **Active on Disk & Evaluated** |
+
+> [!NOTE]
+> **Why Attribution IoU is evaluated only on IDRiD**: Measuring attribution alignment (IoU/Dice against clinical truth) requires ground-truth pixel lesion masks. Only IDRiD provides expert-annotated masks for microaneurysms, hemorrhages, and exudates. APTOS only provides global image grades (0–4).
+
+### 2. Extensible Dataset Registry (Planned Large-Scale Cohorts)
+
+The repository provides ingestion scripts and configuration schemas in [`configs/datasets.yaml`](file:///D:/Mini-project/RetinaGuard/configs/datasets.yaml) for researchers with external high-capacity storage (~100+ GB) to plug in additional cohorts:
+- **DDR** (13,673 images, multi-hospital lesion masks)
+- **EyePACS** (88,702 images, large-scale screening)
+- **Messidor-2** (1,748 images, adjudicated DR + DME)
 
 ### Standard 5-Class DR Grading Scale (ICDR)
 - **Grade 0**: No Diabetic Retinopathy
@@ -295,9 +304,19 @@ The test suite validates components across numerical correctness, gradient flow,
 pytest tests -v
 ```
 
-### Test Coverage (21 / 21 Tests Passing)
-- `tests/test_metrics.py`: Quadratic Weighted Kappa, Macro AUC, ECE, and confusion matrix builders.
+### Test Coverage (110 / 110 Tests Passing — 100% Pass Rate)
+
+#### A. Scientific & Clinical Research Test Suites
+- `tests/test_calibration_uncertainty.py`: Expected Calibration Error (ECE), Multi-Class Brier Score, and normalized entropy metrics.
+- `tests/test_robustness_perturbations.py`: Optical blur, illumination shifts, camera sensor noise, and simulated cataract media opacity stress testing.
+- `tests/test_statistical_significance.py`: Paired Wilcoxon signed-rank tests, non-parametric permutation tests, and bootstrap 95% CI coverage.
+- `tests/test_attribution_sanity.py`: Adebayo et al. parameter randomization sanity checks, Pointing Game boundary tests, and IoU monotonicity.
+- `tests/test_causal_invariance.py`: GRL exact gradient inversion check, cross-covariance orthogonality, and multi-task gradient propagation.
+
+#### B. Algorithmic, Pipeline & Architecture Test Suites
+- `tests/test_metrics.py`: Quadratic Weighted Kappa, Macro AUC, ECE, Referable Sensitivity @ 90% Spec, and 95% Bootstrap Confidence Intervals.
 - `tests/test_models.py`: Baseline backbones (ResNet18, feature extraction, layer freezing).
+- `tests/test_advanced_models.py`: ConvNeXt, EfficientNet-B0, and deep architectural adapters.
 - `tests/test_preprocessing.py`: FOV segmentation, circular cropping, CLAHE normalization, and blur detection.
 - `tests/test_research_models.py`:
   - `SpatialLesionAttention` forward pass & attention map bounds.
@@ -307,7 +326,14 @@ pytest tests -v
   - Cross-covariance statistical independence penalty.
   - `CausalDisentangler` feature projection and dual classification heads.
   - `Unified RetinaGuard` end-to-end multi-task forward & backward pass.
+- `tests/test_explainability.py`: Grad-CAM heatmap extraction, Lesion Attention attribution maps, Pointing Game Hit Rate, and IoU/Dice evaluation.
+- `tests/test_cross_domain_eval.py`: Leave-One-Center-Out generalization evaluator for Baseline and RetinaGuard with 95% bootstrap CIs.
+- `tests/test_ablation_runner.py`: 4-way ablation pipeline across task, lesion, adversarial, and covariance loss variants.
+- `tests/test_data_pipeline.py`, `tests/test_dataset_builders.py`, `tests/test_training_datasets.py`: Multi-center dataset loading, balanced sampling, and transforms.
 - `tests/test_split.py`: Patient leakage prevention and stratified distribution preservation.
+- `tests/test_checkpointing_and_utils.py`: Atomic model save/restore and logging utilities.
+- `tests/test_inference_pipeline.py`: Single-image and batch prediction CLI engines.
+- `tests/test_ui_server.py`: FastAPI clinical triage endpoints, heatmaps, and report endpoints.
 
 ---
 
