@@ -8,13 +8,25 @@ Integrates:
 
 Usage:
     from src.models.retinaguard import RetinaGuardModel
+
+    # 1. Initialize from scratch
     model = RetinaGuardModel(num_classes=5, num_domains=2)
+
+    # 2. Auto-load the best trained medical checkpoint from experiments/
+    model = RetinaGuardModel.from_trained()
+
+    # 3. Load specific trained checkpoint
+    model = RetinaGuardModel.from_trained("experiments/retinaguard/best_retinaguard.pth")
 """
+
+from pathlib import Path
+from typing import Optional, Union
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 import torchvision.models as models
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 
 from src.models.lesion_guided import SpatialLesionAttention, compute_lesion_loss
 from src.models.causal_disentangler import grad_reverse, compute_covariance_penalty
@@ -31,6 +43,7 @@ class RetinaGuardModel(nn.Module):
         latent_dim: int = 256,
         pretrained: bool = True,
         dropout: float = 0.3,
+        checkpoint_path: Optional[Union[str, Path]] = None,
     ):
         super().__init__()
         self.num_classes = num_classes
@@ -70,7 +83,7 @@ class RetinaGuardModel(nn.Module):
             nn.Dropout(dropout),
         )
 
-        # Output heads
+        # Classification heads
         self.disease_classifier = nn.Linear(latent_dim, num_classes)
         self.domain_classifier = nn.Linear(latent_dim, num_domains)
         self.domain_adversary = nn.Sequential(
@@ -79,8 +92,91 @@ class RetinaGuardModel(nn.Module):
             nn.Linear(128, num_domains),
         )
 
+        # Optional loading of trained weights
+        if checkpoint_path is not None:
+            ckpt_p = Path(checkpoint_path)
+            if ckpt_p.exists():
+                data = torch.load(ckpt_p, map_location="cpu", weights_only=False)
+                state_dict = data.get("model_state_dict", data)
+                try:
+                    self.load_state_dict(state_dict)
+                except Exception:
+                    self.load_state_dict(state_dict, strict=False)
+
+    @classmethod
+    def from_trained(
+        cls,
+        checkpoint_path: Optional[Union[str, Path]] = None,
+        architecture: str = "resnet18",
+        num_classes: int = 5,
+        num_domains: int = 2,
+        latent_dim: int = 256,
+        device: Union[str, torch.device] = "cpu",
+    ) -> "RetinaGuardModel":
+        """Load an already trained RetinaGuardModel, auto-discovering best checkpoint if not specified.
+
+        Args:
+            checkpoint_path: Path to checkpoint, or None to auto-find best_retinaguard.pth.
+            architecture: Model architecture.
+            num_classes: Number of DR classes (default 5).
+            num_domains: Number of training domains (default 2).
+            latent_dim: Latent representation size (default 256).
+            device: Target device (cpu or cuda).
+
+        Returns:
+            Trained RetinaGuardModel in evaluation mode.
+        """
+        if checkpoint_path is None:
+            candidates = sorted(
+                list(PROJECT_ROOT.glob("experiments/**/best_retinaguard.pth")),
+                key=lambda p: p.stat().st_mtime,
+                reverse=True,
+            )
+            if not candidates:
+                raise FileNotFoundError(
+                    "No trained RetinaGuard checkpoint found in experiments/. "
+                    "Train RetinaGuard first via `python -m src.training.train_retinaguard`."
+                )
+            checkpoint_path = candidates[0]
+
+        model = cls(
+            architecture=architecture,
+            num_classes=num_classes,
+            num_domains=num_domains,
+            latent_dim=latent_dim,
+            pretrained=False,
+        )
+        data = torch.load(checkpoint_path, map_location=device, weights_only=False)
+        state_dict = data.get("model_state_dict", data)
+        try:
+            model.load_state_dict(state_dict)
+        except Exception:
+            model.load_state_dict(state_dict, strict=False)
+        model.to(device).eval()
+        return model
+
+    @classmethod
+    def load_trained(
+        cls,
+        checkpoint_path: Optional[Union[str, Path]] = None,
+        architecture: str = "resnet18",
+        num_classes: int = 5,
+        num_domains: int = 2,
+        latent_dim: int = 256,
+        device: Union[str, torch.device] = "cpu",
+    ) -> "RetinaGuardModel":
+        """Alias for from_trained()."""
+        return cls.from_trained(
+            checkpoint_path=checkpoint_path,
+            architecture=architecture,
+            num_classes=num_classes,
+            num_domains=num_domains,
+            latent_dim=latent_dim,
+            device=device,
+        )
+
     def extract_features(self, x: torch.Tensor) -> torch.Tensor:
-        """Extract spatial feature map."""
+        """Extract multi-scale convolutional feature maps."""
         x = self.stem(x)
         x = self.layer1(x)
         x = self.layer2(x)

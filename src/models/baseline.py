@@ -1,16 +1,30 @@
 """RetinaGuard - Baseline DR Classification Model.
 
 Lightweight pretrained model for five-class diabetic retinopathy grading.
-Default: ResNet18 with ImageNet pretrained weights.
+Default: ResNet18 with ImageNet pretrained weights or pre-trained RetinaGuard checkpoints.
 
 Usage:
     from src.models.baseline import DRClassifier
+
+    # 1. Initialize with ImageNet weights
     model = DRClassifier(architecture="resnet18", num_classes=5, pretrained=True)
+
+    # 2. Auto-load the best trained medical checkpoint from experiments/
+    model = DRClassifier.from_trained()
+
+    # 3. Load specific trained checkpoint
+    model = DRClassifier.from_trained("experiments/baseline/best_model.pth")
 """
+
+import os
+from pathlib import Path
+from typing import Optional, Union
 
 import torch
 import torch.nn as nn
 import torchvision.models as models
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 
 
 class DRClassifier(nn.Module):
@@ -18,6 +32,7 @@ class DRClassifier(nn.Module):
 
     Supports ResNet18, EfficientNet-B0, and MobileNetV3-Small.
     Uses transfer learning with a custom classification head.
+    Supports auto-loading already trained medical checkpoints.
     """
 
     SUPPORTED_ARCHITECTURES = ["resnet18", "efficientnet_b0", "mobilenet_v3_small"]
@@ -29,6 +44,7 @@ class DRClassifier(nn.Module):
         pretrained: bool = True,
         dropout: float = 0.3,
         freeze_backbone: bool = False,
+        checkpoint_path: Optional[Union[str, Path]] = None,
     ):
         """Initialize the DR classifier.
 
@@ -38,6 +54,7 @@ class DRClassifier(nn.Module):
             pretrained: Whether to use ImageNet pretrained weights.
             dropout: Dropout rate before final classifier.
             freeze_backbone: Whether to freeze backbone parameters.
+            checkpoint_path: Optional path to an already trained checkpoint (.pth) to load.
         """
         super().__init__()
         self.architecture = architecture
@@ -85,6 +102,72 @@ class DRClassifier(nn.Module):
 
         self.pretrained_source = (
             f"torchvision_{architecture}_imagenet1k" if pretrained else "random"
+        )
+
+        # Load trained weights if checkpoint specified
+        if checkpoint_path is not None:
+            ckpt_p = Path(checkpoint_path)
+            if ckpt_p.exists():
+                data = torch.load(ckpt_p, map_location="cpu", weights_only=False)
+                state_dict = data.get("model_state_dict", data)
+                self.load_state_dict(state_dict)
+                self.pretrained_source = str(ckpt_p)
+
+    @classmethod
+    def from_trained(
+        cls,
+        checkpoint_path: Optional[Union[str, Path]] = None,
+        architecture: str = "resnet18",
+        num_classes: int = 5,
+        device: Union[str, torch.device] = "cpu",
+    ) -> "DRClassifier":
+        """Load an already trained DRClassifier, auto-discovering the best model if not provided.
+
+        Args:
+            checkpoint_path: Path to .pth checkpoint, or None to auto-find best_model.pth.
+            architecture: Model architecture.
+            num_classes: Number of DR classes.
+            device: Target device (cpu or cuda).
+
+        Returns:
+            Trained DRClassifier in evaluation mode.
+        """
+        if checkpoint_path is None:
+            candidates = sorted(
+                list(PROJECT_ROOT.glob("experiments/**/best_model.pth")) +
+                list(PROJECT_ROOT.glob("experiments/**/best_baseline.pth")),
+                key=lambda p: p.stat().st_mtime,
+                reverse=True,
+            )
+            if not candidates:
+                raise FileNotFoundError(
+                    "No trained baseline checkpoint found in experiments/. "
+                    "Train a baseline first via `python -m src.training.train_baseline`."
+                )
+            checkpoint_path = candidates[0]
+
+        model = cls(architecture=architecture, num_classes=num_classes, pretrained=False)
+        data = torch.load(checkpoint_path, map_location=device, weights_only=False)
+        state_dict = data.get("model_state_dict", data)
+        model.load_state_dict(state_dict)
+        model.to(device).eval()
+        model.pretrained_source = str(checkpoint_path)
+        return model
+
+    @classmethod
+    def load_trained(
+        cls,
+        checkpoint_path: Optional[Union[str, Path]] = None,
+        architecture: str = "resnet18",
+        num_classes: int = 5,
+        device: Union[str, torch.device] = "cpu",
+    ) -> "DRClassifier":
+        """Alias for from_trained()."""
+        return cls.from_trained(
+            checkpoint_path=checkpoint_path,
+            architecture=architecture,
+            num_classes=num_classes,
+            device=device,
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:

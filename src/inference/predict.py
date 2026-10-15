@@ -54,6 +54,30 @@ class DRPredictor:
         self.device = get_device()
         self.image_size = image_size
         self.model_type = model_type
+
+        # Auto-discover trained checkpoint if not explicitly provided
+        if not checkpoint_path:
+            rg_ckpts = sorted(
+                list(PROJECT_ROOT.glob("experiments/**/best_retinaguard.pth")),
+                key=lambda p: p.stat().st_mtime, reverse=True
+            )
+            b_ckpts = sorted(
+                list(PROJECT_ROOT.glob("experiments/**/best_model.pth")) +
+                list(PROJECT_ROOT.glob("experiments/**/best_baseline.pth")),
+                key=lambda p: p.stat().st_mtime, reverse=True
+            )
+            if self.model_type == "retinaguard" and rg_ckpts:
+                checkpoint_path = rg_ckpts[0]
+            elif self.model_type == "baseline" and b_ckpts:
+                checkpoint_path = b_ckpts[0]
+            elif rg_ckpts:
+                checkpoint_path = rg_ckpts[0]
+            elif b_ckpts:
+                checkpoint_path = b_ckpts[0]
+
+            if checkpoint_path:
+                logger.info(f"Auto-selected trained checkpoint: {checkpoint_path}")
+
         self.checkpoint_path = checkpoint_path
 
         # If checkpoint exists, inspect it to detect model type if set to auto
