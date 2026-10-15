@@ -1,12 +1,12 @@
 # Dataset Acquisition Report
 
-Generated: 2026-10-13 22:05:55
+Generated: 2026-10-15 22:32:45
 
 ## IDRiD ✅
 - **Status**: `VERIFIED`
 - **Official URL**: https://idrid.grand-challenge.org/
 - **License**: CC BY 4.0
-- **Local path**: `D:\Mini-project\data\raw\IDRiD`
+- **Local path**: `D:\Mini-project\RetinaGuard\data\raw\IDRiD`
 - **Images found**: 1032
 - **Labels found**: True
 - **Annotations found**: True
@@ -19,13 +19,14 @@ Generated: 2026-10-13 22:05:55
 - **Status**: `VERIFIED`
 - **Official URL**: https://www.kaggle.com/competitions/aptos2019-blindness-detection
 - **License**: Kaggle Competition Rules
-- **Local path**: `D:\Mini-project\data\raw\APTOS`
-- **Images found**: 25
+- **Local path**: `D:\Mini-project\RetinaGuard\data\raw\APTOS`
+- **Images found**: 1514
 - **Labels found**: True
-- **Annotations found**: False
+- **Annotations found**: True
+- **Masks found**: 1200
 - **Subdirectories**:
   - `test_images`: 8 images
-  - `train_images`: 17 images
+  - `train_images`: 1506 images
 
 ## DDR 📋
 - **Status**: `REQUIRES_MANUAL_APPROVAL`
@@ -38,7 +39,7 @@ Generated: 2026-10-13 22:05:55
 - **Required actions**:
   - Dataset DDR requires manual download:
   -   Official source: https://github.com/nkicsl/DDR-dataset
-  -   Place files in: D:\Mini-project\data\raw\DDR
+  -   Place files in: D:\Mini-project\RetinaGuard\data\raw\DDR
   -   Re-run download_datasets after placing the files.
 
 ## EyePACS 🔐
