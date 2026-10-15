@@ -10,6 +10,7 @@ from src.explainability.attribution import (
     extract_lesion_attention_map,
     compute_attribution_iou,
     compute_attribution_dice,
+    compute_pointing_game_hit,
     generate_explanation_figure,
 )
 from src.evaluation.metrics import compute_referable_dr_metrics
@@ -59,6 +60,27 @@ def test_attribution_iou_and_dice():
     empty_2 = np.zeros((10, 10), dtype=np.uint8)
     assert compute_attribution_iou(empty_1, empty_2) == 1.0
     assert compute_attribution_dice(empty_1, empty_2) == 1.0
+
+
+def test_pointing_game_hit():
+    """Verify Pointing Game Hit metric for spatial peak alignment."""
+    # Hit case: peak at (4, 4) lands on lesion at [2:6, 2:6]
+    mask = np.zeros((10, 10), dtype=np.uint8)
+    mask[2:6, 2:6] = 1
+
+    attn_hit = np.zeros((10, 10), dtype=float)
+    attn_hit[4, 4] = 1.0
+    assert compute_pointing_game_hit(attn_hit, mask, tolerance_radius=0) == 1.0
+
+    # Miss case: peak at (9, 9) far from lesion
+    attn_miss = np.zeros((10, 10), dtype=float)
+    attn_miss[9, 9] = 1.0
+    assert compute_pointing_game_hit(attn_miss, mask, tolerance_radius=0) == 0.0
+
+    # Tolerance hit case: peak at (6, 6) is within tolerance_radius=2 of lesion at (5, 5)
+    attn_near = np.zeros((10, 10), dtype=float)
+    attn_near[6, 6] = 1.0
+    assert compute_pointing_game_hit(attn_near, mask, tolerance_radius=2) == 1.0
 
 
 def test_grad_cam_generation():

@@ -44,6 +44,7 @@ from src.explainability.attribution import (
     extract_lesion_attention_map,
     compute_attribution_iou,
     compute_attribution_dice,
+    compute_pointing_game_hit,
     generate_explanation_figure,
 )
 from src.models.baseline import DRClassifier
@@ -106,8 +107,8 @@ class BenchmarkEvaluator:
         baseline_preds, baseline_probs = [], []
         rg_preds, rg_probs = [], []
 
-        baseline_ious, baseline_dices = [], []
-        rg_ious, rg_dices = [], []
+        baseline_ious, baseline_dices, baseline_hits = [], [], []
+        rg_ious, rg_dices, rg_hits = [], [], []
 
         grad_cam = GradCAM(self.baseline_model, self.baseline_model.backbone.layer4)
 
@@ -155,8 +156,10 @@ class BenchmarkEvaluator:
                 b_cam = grad_cam.generate(tensor, target_class=b_pred)
                 b_iou = compute_attribution_iou(b_cam, gt_mask, dilation_radius=6)
                 b_dice = compute_attribution_dice(b_cam, gt_mask, dilation_radius=6)
+                b_hit = compute_pointing_game_hit(b_cam, gt_mask, tolerance_radius=6)
                 baseline_ious.append(b_iou)
                 baseline_dices.append(b_dice)
+                baseline_hits.append(b_hit)
 
                 # RetinaGuard Lesion Attention heatmap (at feature tensor resolution matching b_cam)
                 rg_attn = extract_lesion_attention_map(
@@ -164,8 +167,10 @@ class BenchmarkEvaluator:
                 )
                 rg_iou = compute_attribution_iou(rg_attn, gt_mask, dilation_radius=6)
                 rg_dice = compute_attribution_dice(rg_attn, gt_mask, dilation_radius=6)
+                rg_hit = compute_pointing_game_hit(rg_attn, gt_mask, tolerance_radius=6)
                 rg_ious.append(rg_iou)
                 rg_dices.append(rg_dice)
+                rg_hits.append(rg_hit)
 
                 # Save a high-resolution comparative visualization for documentation
                 if not sample_explanation_saved:
@@ -204,8 +209,10 @@ class BenchmarkEvaluator:
         # Attribution Metrics
         baseline_metrics["mean_attribution_iou"] = round(float(np.mean(baseline_ious)), 4) if baseline_ious else 0.0
         baseline_metrics["mean_attribution_dice"] = round(float(np.mean(baseline_dices)), 4) if baseline_dices else 0.0
+        baseline_metrics["pointing_game_hit_rate"] = round(float(np.mean(baseline_hits)), 4) if baseline_hits else 0.0
         retinaguard_metrics["mean_attribution_iou"] = round(float(np.mean(rg_ious)), 4) if rg_ious else 0.0
         retinaguard_metrics["mean_attribution_dice"] = round(float(np.mean(rg_dices)), 4) if rg_dices else 0.0
+        retinaguard_metrics["pointing_game_hit_rate"] = round(float(np.mean(rg_hits)), 4) if rg_hits else 0.0
 
         # Plot Confusion Matrices Side by Side
         self._plot_confusion_matrices(
@@ -293,6 +300,7 @@ class BenchmarkEvaluator:
 | **Accuracy** | `{base['accuracy']:.4f}` | **`{rg['accuracy']:.4f}`** | `{rg['accuracy'] - base['accuracy']:+.4f}` | - |
 | **Macro F1 Score** | `{base['macro_f1']:.4f}` | **`{rg['macro_f1']:.4f}`** | `{rg['macro_f1'] - base['macro_f1']:+.4f}` | - |
 | **Referable DR Sens @ 90% Spec** | `{base['referable_sens_at_90_spec']:.4f}` | **`{rg['referable_sens_at_90_spec']:.4f}`** | `{rg['referable_sens_at_90_spec'] - base['referable_sens_at_90_spec']:+.4f}` | $\\ge 0.85$ |
+| **Pointing Game Hit Rate** | `{base.get('pointing_game_hit_rate', 0.0):.4f}` | **`{rg.get('pointing_game_hit_rate', 0.0):.4f}`** | `{rg.get('pointing_game_hit_rate', 0.0) - base.get('pointing_game_hit_rate', 0.0):+.4f}` | Clinical Peak Alignment |
 | **Clinical Attribution IoU** | `{base['mean_attribution_iou']:.4f}` | **`{rg['mean_attribution_iou']:.4f}`** | **`{iou_diff:+.4f}`** | High Alignment |
 | **Clinical Attribution Dice** | `{base['mean_attribution_dice']:.4f}` | **`{rg['mean_attribution_dice']:.4f}`** | `{rg['mean_attribution_dice'] - base['mean_attribution_dice']:+.4f}` | High Overlap |
 
@@ -302,14 +310,15 @@ class BenchmarkEvaluator:
 
 1. **Ordinal Grading Consistency (QWK)**:
    - RetinaGuard penalizes distant ordinal misclassifications (e.g. confusing Grade 0 with Grade 4) significantly more effectively than standard cross-entropy baseline.
-2. **Pathological Attention Alignment**:
-   - RetinaGuard's explicit spatial lesion attention demonstrates **`{rg['mean_attribution_iou']:.4f}`** Attribution IoU against verified clinical masks (vs. `{base['mean_attribution_iou']:.4f}` for baseline Grad-CAM), confirming that features focus directly on microaneurysms and exudates rather than background camera vignetting.
+2. **Pathological Attention Alignment & Pointing Game**:
+   - RetinaGuard's explicit spatial lesion attention demonstrates **`{rg.get('pointing_game_hit_rate', 0.0):.4f}`** Pointing Game Hit Rate (vs. `{base.get('pointing_game_hit_rate', 0.0):.4f}` for baseline Grad-CAM), confirming that peak saliency lands directly on verified microaneurysms and exudates rather than background camera vignetting.
 3. **Causal Invariance**:
    - The causal disentanglement penalty successfully forces domain-specific features into the acquisition subspace $Z_a$, leaving $Z_d$ resilient against dataset-specific artifacts.
 
 ---
 
 ## 3. Artifact References
+- **Causal Disentanglement Manifold**: `outputs/figures/causal_disentanglement_tsne.png`
 - **Confusion Matrix Figure**: `outputs/figures/confusion_matrices_comparison.png`
 - **Sample Visual Explanation**: `outputs/figures/attribution_comparison_sample.png`
 - **Machine-Readable Metrics**: `outputs/reports/benchmark_comparison.json`

@@ -35,6 +35,7 @@ def generate_ieee_html() -> Path:
     ablation_fig = (PROJECT_ROOT / "outputs" / "figures" / "ablation_metrics_comparison.png").as_uri()
     cm_fig = (PROJECT_ROOT / "outputs" / "figures" / "confusion_matrices_comparison.png").as_uri()
     sample_fig = (PROJECT_ROOT / "outputs" / "figures" / "sample_clinical_prediction.png").as_uri()
+    tsne_fig = (PROJECT_ROOT / "outputs" / "figures" / "causal_disentanglement_tsne.png").as_uri()
 
     html_content = f"""<!DOCTYPE html>
 <html lang="en">
@@ -381,6 +382,11 @@ def generate_ieee_html() -> Path:
     <div class="figure-container">
       <img src="{ablation_fig}" alt="Ablation Comparison">
       <div class="figure-caption"><strong>Fig. 2.</strong> Quantitative ablation across the four model variants illustrating diagnostic performance (QWK), domain generalization gap compression (&Delta; Acc), and clinical lesion attribution IoU.</div>
+    </div>
+
+    <div class="figure-container">
+      <img src="{tsne_fig}" alt="Causal Disentanglement Manifold">
+      <div class="figure-caption"><strong>Fig. 3.</strong> Empirical validation of causal feature disentanglement via t-SNE latent manifold projection. (a) Disease latent space <em>Z<sub>d</sub></em> cleanly organizes along the continuous progression of Diabetic Retinopathy grades (0 to 4) while maintaining hospital camera invariance. (b) Acquisition latent space <em>Z<sub>a</sub></em> isolates clinical imaging hardware artifacts (IDRiD vs. APTOS).</div>
     </div>
 
     <h2>V. Component Ablation Study</h2>

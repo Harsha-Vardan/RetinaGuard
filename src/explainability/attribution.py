@@ -234,6 +234,50 @@ def compute_attribution_dice(
     return float((2.0 * intersection) / (total + 1e-8))
 
 
+def compute_pointing_game_hit(
+    attribution_map: np.ndarray,
+    ground_truth_mask: np.ndarray,
+    tolerance_radius: int = 5,
+) -> float:
+    """Compute Pointing Game Hit metric (standard in clinical saliency benchmarking).
+
+    A hit (1.0) is recorded if the coordinate of maximum saliency falls inside a
+    ground-truth lesion or within a clinical tolerance radius; otherwise 0.0 (miss).
+
+    Args:
+        attribution_map: 2D float array in [0.0, 1.0].
+        ground_truth_mask: 2D binary mask or [0, 255].
+        tolerance_radius: Spatial radius in pixels around lesion considered valid.
+
+    Returns:
+        1.0 for Hit, 0.0 for Miss. If mask is completely empty, returns 1.0 if peak < 0.1 else 0.0.
+    """
+    gt_bin = (ground_truth_mask > 0).astype(bool)
+
+    if not gt_bin.any():
+        # Negative case: correct if model does not strongly attend to lesions
+        return 1.0 if np.max(attribution_map) < 0.1 else 0.0
+
+    if attribution_map.shape != gt_bin.shape:
+        gt_resized = cv2.resize(
+            gt_bin.astype(np.float32),
+            (attribution_map.shape[1], attribution_map.shape[0]),
+            interpolation=cv2.INTER_AREA,
+        )
+        gt_bin = (gt_resized > 0)
+
+    if tolerance_radius > 0:
+        kernel = cv2.getStructuringElement(
+            cv2.MORPH_ELLIPSE, (tolerance_radius * 2 + 1, tolerance_radius * 2 + 1)
+        )
+        gt_bin = cv2.dilate(gt_bin.astype(np.uint8), kernel).astype(bool)
+
+    # Find peak coordinate of attribution map
+    max_idx = np.unravel_index(np.argmax(attribution_map), attribution_map.shape)
+    hit = bool(gt_bin[max_idx])
+    return 1.0 if hit else 0.0
+
+
 def generate_explanation_figure(
     image_np: np.ndarray,
     heatmap: np.ndarray,
