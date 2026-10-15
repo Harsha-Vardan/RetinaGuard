@@ -171,11 +171,13 @@ def _stratified_split(
             sgkf = StratifiedGroupKFold(n_splits=max(2, int(1/test_ratio)), shuffle=True, random_state=seed)
             for train_idx, test_idx in sgkf.split(np.zeros(n), labels, groups):
                 splits.iloc[test_idx] = "test"
-                # Split train into train/val
+                # Split remaining into train/val preserving patient groups
                 remaining_labels = labels[train_idx]
+                remaining_groups = groups[train_idx]
                 val_frac = val_ratio / (train_ratio + val_ratio)
-                skf = StratifiedKFold(n_splits=max(2, int(1/val_frac)), shuffle=True, random_state=seed)
-                for tr_idx, val_idx in skf.split(np.zeros(len(train_idx)), remaining_labels):
+                n_val_splits = max(2, int(round(1.0 / val_frac)))
+                sgkf_val = StratifiedGroupKFold(n_splits=n_val_splits, shuffle=True, random_state=seed)
+                for tr_idx, val_idx in sgkf_val.split(np.zeros(len(train_idx)), remaining_labels, remaining_groups):
                     splits.iloc[train_idx[val_idx]] = "val"
                     break
                 break

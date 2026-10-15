@@ -1,0 +1,8 @@
+# Baseline: Domain-Adversarial Neural Networks (DANN)
+method: "DANN"
+architecture: "resnet18"
+pretrained: true
+lambda_adv: 0.5
+learning_rate: 0.0002
+batch_size: 16
+epochs: 10

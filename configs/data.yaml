@@ -1,0 +1,86 @@
+# RetinaGuard Dataset Configuration
+# Official sources, download methods, and local paths
+
+project:
+  name: RetinaGuard
+  data_root: data
+  raw_dir: data/raw
+  interim_dir: data/interim
+  processed_dir: data/processed
+  metadata_dir: data/metadata
+  manifests_dir: data/manifests
+
+datasets:
+  IDRiD:
+    priority: P0
+    official_url: "https://idrid.grand-challenge.org/"
+    download_method: ieee_dataport
+    ieee_dataport_id: "2349"
+    description: "Indian Diabetic Retinopathy Image Dataset"
+    license: "CC BY 4.0"
+    tasks:
+      - disease_grading
+      - lesion_segmentation
+      - optic_disc_localization
+    dr_grades: [0, 1, 2, 3, 4]
+    lesion_types:
+      - microaneurysms
+      - hemorrhages
+      - hard_exudates
+      - soft_exudates
+    expected_grading_images: 516
+    expected_segmentation_images: 81
+    archives:
+      - pattern: "*IDRiD*"
+      - pattern: "*idrid*"
+
+  APTOS:
+    priority: P1
+    official_url: "https://www.kaggle.com/competitions/aptos2019-blindness-detection"
+    download_method: kaggle
+    kaggle_competition: "aptos2019-blindness-detection"
+    description: "APTOS 2019 Blindness Detection"
+    license: "Kaggle Competition Rules"
+    tasks:
+      - disease_grading
+    dr_grades: [0, 1, 2, 3, 4]
+    expected_images: ~3662
+    archives:
+      - pattern: "*aptos*"
+      - pattern: "*APTOS*"
+
+  DDR:
+    priority: P2
+    official_url: "https://github.com/nkicsl/DDR-dataset"
+    download_method: manual
+    description: "DDR Dataset for Diabetic Retinopathy"
+    license: "Research use"
+    tasks:
+      - disease_grading
+      - lesion_segmentation
+    dr_grades: [0, 1, 2, 3, 4, 5]  # DDR has 6 classes (includes ungradable)
+    lesion_types:
+      - microaneurysms
+      - hemorrhages
+      - hard_exudates
+      - soft_exudates
+    archives:
+      - pattern: "*DDR*"
+      - pattern: "*ddr*"
+
+  EyePACS:
+    priority: P2
+    official_url: "https://www.kaggle.com/competitions/diabetic-retinopathy-detection"
+    download_method: kaggle
+    kaggle_competition: "diabetic-retinopathy-detection"
+    description: "Diabetic Retinopathy Detection (EyePACS)"
+    license: "Kaggle Competition Rules"
+    tasks:
+      - disease_grading
+    dr_grades: [0, 1, 2, 3, 4]
+    expected_images: ~88702
+    estimated_download_gb: 89
+    estimated_extracted_gb: 89
+    archives:
+      - pattern: "*eyepacs*"
+      - pattern: "*diabetic-retinopathy-detection*"

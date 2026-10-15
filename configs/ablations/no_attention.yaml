@@ -1,0 +1,4 @@
+# Ablation: Without Spatial Attention Guidance
+inherits: "../lgcrl.yaml"
+losses:
+  lambda_att: 0.0

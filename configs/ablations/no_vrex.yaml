@@ -1,0 +1,4 @@
+# Ablation: Without V-REx Variance of Risk Penalty
+inherits: "../lgcrl.yaml"
+losses:
+  lambda_rex: 0.0

@@ -1,0 +1,7 @@
+# Ablation: Without Lesion Attention Head
+inherits: "../lgcrl.yaml"
+model:
+  lesion_decoder: null
+losses:
+  lambda_seg: 0.0
+  lambda_att: 0.0

@@ -1,0 +1,4 @@
+# Ablation: Without Domain Adversarial GRL
+inherits: "../lgcrl.yaml"
+losses:
+  lambda_adv: 0.0

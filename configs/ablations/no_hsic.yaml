@@ -1,0 +1,4 @@
+# Ablation: Without Cross-Covariance Disentanglement Penalty
+inherits: "../lgcrl.yaml"
+losses:
+  lambda_dep: 0.0

@@ -1,0 +1,9 @@
+# Baseline: MixStyle (Domain Generalization via Feature Statistics Mixing)
+method: "MixStyle"
+architecture: "resnet18"
+pretrained: true
+mixstyle_p: 0.5
+mixstyle_alpha: 0.1
+learning_rate: 0.0002
+batch_size: 16
+epochs: 10

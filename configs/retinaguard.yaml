@@ -1,0 +1,52 @@
+# RetinaGuard - Lesion-Guided Causally Informed Representation Learning (LG-CRL)
+# Master Configuration
+
+model:
+  name: "RetinaGuard-LGCRL"
+  architecture: "resnet18"
+  pretrained: true
+  pretrained_source: "torchvision_imagenet1k_v1"
+  num_classes: 5
+  num_domains: 2
+  latent_dim: 256
+  dropout: 0.3
+  lesion_decoder: "spatial_attention"
+  num_lesions: 4  # MA, HE, EX, SE
+
+losses:
+  lambda_ord: 1.0     # Ordinal / cross-entropy DR classification loss
+  lambda_seg: 0.5     # Dense lesion segmentation (Dice + BCE) on annotated subsets
+  lambda_att: 0.3     # Spatial lesion attention alignment loss
+  lambda_adv: 0.2     # Domain adversarial GRL loss on causal latent z_disease
+  lambda_dom: 0.2     # Domain classification on spurious latent z_domain
+  lambda_dep: 0.1     # Statistical disentanglement / cross-covariance penalty Cov(z_d, z_s)
+  lambda_cf: 0.1      # Counterfactual consistency under style / Fourier interventions
+  lambda_rex: 0.1     # Variance of risk penalty across training domains
+
+training:
+  image_size: [256, 256]
+  batch_size: 16
+  num_workers: 0
+  optimizer: "adamw"
+  learning_rate: 0.0002
+  weight_decay: 0.0001
+  scheduler: "cosine"
+  scheduler_params:
+    T_max: 20
+    eta_min: 0.000001
+  epochs: 20
+  early_stopping:
+    enabled: true
+    patience: 10
+    monitor: "val_qwk"
+    mode: "max"
+  seed: 42
+  deterministic: true
+  mixed_precision: false
+  checkpoint_dir: "experiments/retinaguard"
+  save_best: true
+
+curriculum:
+  stage_a_epochs: 5    # Warmup lesion attention decoder on annotated masks
+  stage_b_epochs: 10   # Introduce adversarial GRL and cross-covariance penalty
+  stage_c_epochs: 20   # Full joint optimization with counterfactual invariance

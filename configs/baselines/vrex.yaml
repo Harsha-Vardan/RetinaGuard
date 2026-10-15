@@ -1,0 +1,9 @@
+# Baseline: Risk Extrapolation (V-REx)
+method: "VREx"
+architecture: "resnet18"
+pretrained: true
+rex_lambda: 1.0
+rex_anneal_iters: 500
+learning_rate: 0.0002
+batch_size: 16
+epochs: 10
