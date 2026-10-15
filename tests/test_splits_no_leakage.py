@@ -47,13 +47,13 @@ def test_lodo_held_out_domain_isolation():
         pytest.skip("Master metadata not present")
 
     df = pd.read_csv(master_meta_csv)
-    if "source_dataset" not in df.columns or "split" not in df.columns:
-        pytest.skip("source_dataset or split column missing")
+    ds_col = "dataset_id" if "dataset_id" in df.columns else ("source_dataset" if "source_dataset" in df.columns else None)
+    if ds_col is None or "split" not in df.columns:
+        pytest.skip("dataset identifier or split column missing")
 
     # In our primary setup, IDRiD is source and APTOS is external held-out test
     # If APTOS images are flagged as held-out, verify none are in train split
-    held_out_domains = {"APTOS"}
-    source_train_domains = set(df[df["split"] == "train"]["source_dataset"].unique())
+    source_train_domains = set(df[df["split"] == "train"][ds_col].unique())
 
     # If user trained on IDRiD only, APTOS must not be in training set
     if "IDRiD" in source_train_domains and len(source_train_domains) == 1:

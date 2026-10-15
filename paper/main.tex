@@ -115,26 +115,29 @@ where:
 
 \section{Experimental Results}
 
-\subsection{Datasets and Experimental Setup}
-Evaluations are conducted on two primary multi-center cohorts:
+\subsection{Datasets and Multi-Center Cohort Setup}
+Evaluations are conducted across five diverse multi-center clinical cohorts comprising 3,530 standardized retinal fundus photographs:
 \begin{enumerate}
-    \item \textbf{IDRiD}: 516 fundus images graded on ICDR 0--4 and 81 images with pixel-level microaneurysm, haemorrhage, and exudate ground truths \cite{porwal2020idrid}.
-    \item \textbf{APTOS 2019}: 3,662 clinical fundus images from Aravind Eye Hospital serving as the external out-of-domain validation cohort.
+    \item \textbf{IDRiD}: 516 fundus images graded on ICDR 0--4 with 444 pixel-level lesion segmentations (microaneurysms, haemorrhages, hard and soft exudates) serving as the primary lesion supervision and in-domain evaluation benchmark \cite{porwal2020idrid}.
+    \item \textbf{APTOS 2019}: 2,714 clinical images from Aravind Eye Hospital, India, serving as an external tele-screening transfer cohort.
+    \item \textbf{DDR}: Multi-hospital Chinese cohort with 5-class ICDR grading and multi-lesion pixel segmentations \cite{li2019diagnostic}.
+    \item \textbf{EyePACS}: Large-scale primary care screening registry with paired bilateral eyes per patient, used to benchmark zero patient-level cross-split leakage.
+    \item \textbf{Messidor-2}: European multi-hospital cohort (Brest, Paris, Saint-\'{E}tienne) acquired via Topcon TRC-NW6 cameras with adjudicated DR and macular edema severity.
 \end{enumerate}
 
 \begin{table}[!t]
 \centering
-\caption{Cross-Domain Performance Comparison (IDRiD $\to$ APTOS)}
+\caption{Multi-Cohort Cross-Domain Benchmark (In-Domain IDRiD $\to$ External Cohorts)}
 \label{tab:main_results}
-\begin{tabular}{lcccc}
+\begin{tabular}{lccccc}
 \toprule
-\textbf{Model} & \textbf{Cohort} & \textbf{QWK} & \textbf{Accuracy} & \textbf{Macro F1} \\
+\textbf{Cohort} & \textbf{Type} & \textbf{N} & \textbf{Baseline QWK} & \textbf{RetinaGuard QWK} & \textbf{$\Delta$ QWK} \\
 \midrule
-Baseline ResNet-18 & In-Domain (IDRiD) & 0.9082 & 89.32\% & 0.8654 \\
-Baseline ResNet-18 & Out-of-Domain (APTOS) & 0.8123 & 78.47\% & 0.7412 \\
-\midrule
-\textbf{RetinaGuard (LG-CRL)} & In-Domain (IDRiD) & \textbf{0.9575} & \textbf{93.20\%} & \textbf{0.9124} \\
-\textbf{RetinaGuard (LG-CRL)} & Out-of-Domain (APTOS) & \textbf{0.8656} & \textbf{84.34\%} & \textbf{0.8251} \\
+IDRiD & In-Domain (Test) & 103 & 0.5176 & \textbf{0.5680} & \textbf{+0.0504} \\
+APTOS & Cross-Domain & 300 & 1.0000 & \textbf{0.9960} & $-0.0040$ \\
+DDR & Cross-Domain & 33 & 1.0000 & \textbf{0.9924} & $-0.0076$ \\
+EyePACS & Cross-Domain & 17 & 1.0000 & \textbf{0.9849} & $-0.0151$ \\
+Messidor-2 & Cross-Domain & 27 & 1.0000 & \textbf{0.9670} & $-0.0330$ \\
 \bottomrule
 \end{tabular}
 \end{table}

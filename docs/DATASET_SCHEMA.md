@@ -1,8 +1,8 @@
 # Dataset Schema Documentation
 
-Generated: 2026-10-14 21:56:46
+Generated: 2026-10-15 22:49:29
 
-Total records: 3230
+Total records: 3530
 
 ## Column Descriptions
 
@@ -49,6 +49,28 @@ Total records: 3230
   - Grade 3: 300
   - Grade 4: 300
 
+### DDR
+- Records: 100
+- With labels: 100
+- With masks: 0
+- Grade distribution:
+  - Grade 0: 20
+  - Grade 1: 20
+  - Grade 2: 20
+  - Grade 3: 20
+  - Grade 4: 20
+
+### EyePACS
+- Records: 100
+- With labels: 100
+- With masks: 0
+- Grade distribution:
+  - Grade 0: 23
+  - Grade 1: 21
+  - Grade 2: 19
+  - Grade 3: 20
+  - Grade 4: 17
+
 ### IDRiD
 - Records: 516
 - With labels: 516
@@ -59,3 +81,13 @@ Total records: 3230
   - Grade 2: 168
   - Grade 3: 93
   - Grade 4: 62
+
+### Messidor-2
+- Records: 100
+- With labels: 80
+- With masks: 0
+- Grade distribution:
+  - Grade 1: 20
+  - Grade 2: 20
+  - Grade 3: 20
+  - Grade 4: 20

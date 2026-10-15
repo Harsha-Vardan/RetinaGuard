@@ -69,6 +69,8 @@ class MetadataBuilder:
                 records = self._process_ddr(dataset_dir)
             elif name == "EyePACS":
                 records = self._process_eyepacs(dataset_dir)
+            elif name in ["Messidor", "Messidor-2", "MESSIDOR"]:
+                records = self._process_messidor(dataset_dir)
             else:
                 records = self._process_generic(name, dataset_dir)
 
@@ -394,6 +396,65 @@ class MetadataBuilder:
                 "split": self._infer_split_from_path(img_path),
                 "duplicate_group": None,
                 "label_status": "verified" if stem in labels else "missing",
+                "preprocessing_version": None,
+            }
+            records.append(record)
+
+        return records
+
+    def _process_messidor(self, dataset_dir: Path) -> list[dict]:
+        """Process Messidor / Messidor-2 dataset into metadata records."""
+        records = []
+        label_files = list(dataset_dir.rglob("*.csv")) + list(dataset_dir.rglob("*.xls*"))
+        labels = {}
+
+        for lf in label_files:
+            try:
+                df = pd.read_csv(lf)
+                for col_pair in [
+                    ("image_id", "adjudicated_dr_grade"),
+                    ("image_name", "dr_grade"),
+                    ("Image", "Retinopathy grade"),
+                    ("image", "level"),
+                ]:
+                    if all(c in df.columns for c in col_pair):
+                        for _, row in df.iterrows():
+                            img_id = str(row[col_pair[0]]).strip()
+                            try:
+                                g = int(row[col_pair[1]])
+                                labels[img_id] = g
+                                labels[Path(img_id).stem] = g
+                            except (ValueError, TypeError):
+                                pass
+            except Exception:
+                pass
+
+        image_extensions = {".jpg", ".jpeg", ".png", ".tif", ".tiff"}
+        images = [
+            f for f in dataset_dir.rglob("*")
+            if f.is_file() and f.suffix.lower() in image_extensions
+        ]
+
+        for img_path in images:
+            stem = img_path.stem
+            grade = labels.get(stem) or labels.get(img_path.name)
+            record = {
+                "image_id": f"Messidor_{stem}",
+                "image_path": str(img_path),
+                "dataset_id": "Messidor-2",
+                "original_label": grade,
+                "dr_grade": grade if grade is not None and 0 <= grade <= 4 else None,
+                "hospital_id": "Brest-Paris-Saint-Etienne",
+                "camera_id": "Topcon_TRC_NW6",
+                "patient_id": stem.split("_")[0] if "_" in stem else None,
+                "eye": None,
+                "image_quality": "good",
+                "gradable": True,
+                "lesion_mask_path": None,
+                "lesion_annotation_type": None,
+                "split": self._infer_split_from_path(img_path),
+                "duplicate_group": None,
+                "label_status": "verified" if grade is not None else "missing",
                 "preprocessing_version": None,
             }
             records.append(record)

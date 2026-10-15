@@ -77,18 +77,17 @@ def create_splits(
     # Check for existing splits from source datasets
     if "split" in splittable.columns and splittable["split"].notna().any():
         logger.info("Using existing split assignments from source datasets")
-        if "val" not in splittable["split"].values:
-            train_mask = splittable["split"] == "train"
-            train_records = splittable[train_mask]
-            if len(train_records) > 2:
-                logger.info(f"Carving validation set out of {len(train_records)} training records")
-                val_fraction = val_ratio / (train_ratio + val_ratio)
-                train_val_splits = _stratified_split(
-                    train_records, stratify_col, group_col,
-                    train_ratio=1.0 - val_fraction, val_ratio=val_fraction, seed=seed
-                )
-                val_sub_mask = train_val_splits.isin(["val", "test"])
-                splittable.loc[train_records[val_sub_mask].index, "split"] = "val"
+        train_mask = splittable["split"] == "train"
+        train_records = splittable[train_mask]
+        if len(train_records) > 2 and ("val" not in splittable["split"].values or splittable["split"].eq("val").sum() == 0):
+            logger.info(f"Carving validation set out of {len(train_records)} training records")
+            val_fraction = val_ratio / (train_ratio + val_ratio)
+            train_val_splits = _stratified_split(
+                train_records, stratify_col, group_col,
+                train_ratio=1.0 - val_fraction, val_ratio=val_fraction, seed=seed
+            )
+            val_sub_mask = train_val_splits.isin(["val", "test"])
+            splittable.loc[train_records[val_sub_mask].index, "split"] = "val"
 
         # Respect existing splits but handle records without splits
         needs_split = splittable[splittable["split"].isna()]
@@ -110,6 +109,17 @@ def create_splits(
     # Combine
     df.loc[splittable.index, "split"] = splittable["split"]
     df.loc[unsplittable.index, "split"] = "excluded"
+
+    # Strict Patient Isolation Postcondition: Enforce that no patient ID spans multiple splits
+    if group_col in df.columns:
+        valid_groups = df[df["split"].isin(["train", "val", "test"]) & df[group_col].notna()]
+        patient_splits = valid_groups.groupby(group_col)["split"].unique()
+        leaked = patient_splits[patient_splits.apply(lambda s: len(set(s)) > 1)]
+        if len(leaked) > 0:
+            logger.warning(f"Enforcing strict patient isolation for {len(leaked)} split-spanning patients...")
+            for pid, s_list in leaked.items():
+                chosen_split = "train" if "train" in s_list else s_list[0]
+                df.loc[df[group_col] == pid, "split"] = chosen_split
 
     # Log distribution
     split_counts = df["split"].value_counts()
@@ -158,51 +168,73 @@ def _stratified_split(
     )
 
     splits = pd.Series("train", index=df.index)
+    test_ratio = max(0.0, round(1.0 - train_ratio - val_ratio, 6))
 
     if has_groups:
         fallback = pd.Series([f"unknown_{i}" for i in range(len(df))], index=df.index)
         groups = df[group_col].fillna(fallback).astype(str).values
-        logger.info(f"Using patient-aware splitting ({df[group_col].nunique()} groups)")
+        n_unique_groups = len(np.unique(groups))
+        logger.info(f"Using patient-aware splitting ({n_unique_groups} groups)")
         try:
-            # Two-stage split: first separate test, then split remaining into train/val
-            test_ratio = 1.0 - train_ratio - val_ratio
-            n_test = max(2, int(n * test_ratio / (test_ratio + val_ratio + train_ratio) * 5))
-
-            sgkf = StratifiedGroupKFold(n_splits=max(2, int(1/test_ratio)), shuffle=True, random_state=seed)
-            for train_idx, test_idx in sgkf.split(np.zeros(n), labels, groups):
-                splits.iloc[test_idx] = "test"
-                # Split remaining into train/val preserving patient groups
-                remaining_labels = labels[train_idx]
-                remaining_groups = groups[train_idx]
-                val_frac = val_ratio / (train_ratio + val_ratio)
+            if test_ratio < 0.005:
+                # 2-way split directly between train and val
+                val_frac = max(0.01, min(0.99, val_ratio))
                 n_val_splits = max(2, int(round(1.0 / val_frac)))
-                sgkf_val = StratifiedGroupKFold(n_splits=n_val_splits, shuffle=True, random_state=seed)
-                for tr_idx, val_idx in sgkf_val.split(np.zeros(len(train_idx)), remaining_labels, remaining_groups):
-                    splits.iloc[train_idx[val_idx]] = "val"
-                    break
-                break
+                n_val_splits = min(n_val_splits, n_unique_groups)
+                if n_val_splits >= 2:
+                    sgkf = StratifiedGroupKFold(n_splits=n_val_splits, shuffle=True, random_state=seed)
+                    for train_idx, val_idx in sgkf.split(np.zeros(n), labels, groups):
+                        splits.iloc[val_idx] = "val"
+                        break
+                else:
+                    has_groups = False
+            else:
+                # 3-way split: first separate test, then split remaining into train/val
+                n_test_splits = max(2, int(round(1.0 / test_ratio)))
+                n_test_splits = min(n_test_splits, n_unique_groups)
+                if n_test_splits >= 2:
+                    sgkf = StratifiedGroupKFold(n_splits=n_test_splits, shuffle=True, random_state=seed)
+                    for train_idx, test_idx in sgkf.split(np.zeros(n), labels, groups):
+                        splits.iloc[test_idx] = "test"
+                        remaining_labels = labels[train_idx]
+                        remaining_groups = groups[train_idx]
+                        val_frac = val_ratio / (train_ratio + val_ratio)
+                        n_val_splits = max(2, int(round(1.0 / max(0.01, val_frac))))
+                        rem_groups_count = len(np.unique(remaining_groups))
+                        n_val_splits = min(n_val_splits, rem_groups_count)
+                        if n_val_splits >= 2:
+                            sgkf_val = StratifiedGroupKFold(n_splits=n_val_splits, shuffle=True, random_state=seed)
+                            for tr_idx, val_idx in sgkf_val.split(np.zeros(len(train_idx)), remaining_labels, remaining_groups):
+                                splits.iloc[train_idx[val_idx]] = "val"
+                                break
+                        break
+                else:
+                    has_groups = False
         except Exception as e:
             logger.warning(f"Patient-aware splitting failed: {e}. Falling back to stratified.")
             has_groups = False
 
     if not has_groups:
-        # Simple stratified split
-        indices = np.arange(n)
-        np.random.shuffle(indices)
-
-        n_train = int(n * train_ratio)
-        n_val = int(n * val_ratio)
-
         try:
-            skf = StratifiedKFold(n_splits=max(2, int(1/(1-train_ratio))), shuffle=True, random_state=seed)
-            for train_idx, test_val_idx in skf.split(np.zeros(n), labels):
-                splits.iloc[test_val_idx[:len(test_val_idx)//2]] = "val"
-                splits.iloc[test_val_idx[len(test_val_idx)//2:]] = "test"
-                break
+            if test_ratio < 0.005:
+                val_frac = max(0.01, min(0.99, val_ratio))
+                n_splits = max(2, int(round(1.0 / val_frac)))
+                skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=seed)
+                for train_idx, val_idx in skf.split(np.zeros(n), labels):
+                    splits.iloc[val_idx] = "val"
+                    break
+            else:
+                skf = StratifiedKFold(n_splits=max(2, int(round(1.0 / (1.0 - train_ratio)))), shuffle=True, random_state=seed)
+                for train_idx, test_val_idx in skf.split(np.zeros(n), labels):
+                    splits.iloc[test_val_idx[:len(test_val_idx)//2]] = "val"
+                    splits.iloc[test_val_idx[len(test_val_idx)//2:]] = "test"
+                    break
         except Exception:
-            # Fallback: random split
+            n_train = int(n * train_ratio)
+            n_val = int(n * val_ratio)
             splits.iloc[n_train:n_train+n_val] = "val"
-            splits.iloc[n_train+n_val:] = "test"
+            if test_ratio >= 0.005:
+                splits.iloc[n_train+n_val:] = "test"
 
     return splits
 
@@ -227,3 +259,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

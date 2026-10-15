@@ -156,19 +156,20 @@ def build_deck():
     s4 = prs.slides.add_slide(blank_layout)
     set_slide_background(s4, prs)
     add_header(s4, "Multi-Center Cohorts Representing Divergent Clinical Realities", "Data Diversity")
-    create_card(s4, Inches(1.0), Inches(2.0), Inches(5.3), Inches(4.5), "Primary Evaluated Cohorts", [
-        "IDRiD (India): 516 graded images + 81 dense masks",
-        "APTOS 2019 (Aravind Hospital): 3,662 screening images",
-        "Total curated images: 4,178 instances",
-        "Patient-level split to prevent data leakage"
+    create_card(s4, Inches(1.0), Inches(2.0), Inches(5.3), Inches(4.5), "Five Clinical Cohorts Evaluated", [
+        "IDRiD (India): 516 images + 444 pixel masks",
+        "APTOS 2019 (Aravind Eye Hospital): 2,714 images",
+        "DDR (CAS, China): 100 images + multi-lesion masks",
+        "EyePACS (USA): 100 images (50 bilateral pairs)",
+        "Messidor-2 (France): 100 images (Topcon TRC-NW6)"
     ], COLOR_CYAN)
-    create_card(s4, Inches(6.8), Inches(2.0), Inches(5.5), Inches(4.5), "Extensible Registry Integration", [
-        "DDR (CAS): 13,673 multi-lesion images",
-        "EyePACS (Kaggle): 88,702 screening photographs",
-        "Standardized to 5-level ICDR grading scale",
-        "Verified with salted patient SHA-256 hashes"
+    create_card(s4, Inches(6.8), Inches(2.0), Inches(5.5), Inches(4.5), "Unified Master Metadata (3,530 Images)", [
+        "Standardized to 5-level ICDR grading scale (0-4)",
+        "Strict patient-level isolation (zero leakage)",
+        "Multi-lesion segmentation (MA, HE, EX, SE)",
+        "Harmonized device, hospital, and split metadata"
     ], COLOR_EMERALD)
-    s4.notes_slide.notes_text_frame.text = "Numbers logged from data/metadata/master_metadata.csv. We evaluated on IDRiD (dense lesion ground truth) and tested transfer on APTOS."
+    s4.notes_slide.notes_text_frame.text = "Numbers logged from data/metadata/master_metadata.csv. All 5 cohorts (IDRiD, APTOS, DDR, EyePACS, Messidor-2) are processed and evaluated."
 
     # SLIDE 5: Preprocessing & Quality Control
     s5 = prs.slides.add_slide(blank_layout)

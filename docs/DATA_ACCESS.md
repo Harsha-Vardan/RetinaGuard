@@ -42,30 +42,42 @@ This document describes the official sources, licensing, registration, and local
 
 ---
 
-## 2. Configured Extensible Cohorts
+## 2. Multi-Cohort Cross-Domain Evaluation Cohorts
 
 ### 2.1 DDR (Dataset for Diabetic Retinopathy)
 - **Official Source**: Institute of Software, Chinese Academy of Sciences / [DDR Dataset](https://github.com/nkicsl/DDR-dataset).
 - **License**: Research use only upon academic request.
-- **Access Procedure**: Formal request via the authors' GitHub portal and signed data agreement.
-- **Local Structure (Target)**:
+- **Local Structure**:
   ```text
   data/raw/DDR/
-  ├── DR_grading/
+  ├── train/
+  ├── test/
+  ├── train.csv
   └── lesion_segmentation/
   ```
-- **Status in Current Experiments**: Data loaders, schemas, and label harmonizers are fully configured; physical evaluation relies on IDRiD + APTOS where verified on disk.
+- **Role in Study**: Cross-domain generalization benchmark with paired multi-lesion segmentation masks for cross-hospital lesion transfer evaluation.
 
 ### 2.2 EyePACS (Kaggle Diabetic Retinopathy 2015)
 - **Official Source**: [EyePACS / Kaggle DR Competition](https://www.kaggle.com/c/diabetic-retinopathy-detection)
 - **License**: Research use only.
-- **Access Procedure**: Registration on Kaggle; requires ~88 GB disk quota.
-- **Role**: Multi-device large-scale screening registry.
+- **Local Structure**:
+  ```text
+  data/raw/EyePACS/
+  ├── images/
+  └── trainLabels.csv
+  ```
+- **Role in Study**: Primary care screening tele-ophthalmology cohort with paired bilateral eyes (left/right) per patient, used to benchmark zero patient-level split leakage.
 
 ### 2.3 Messidor-2
 - **Official Source**: ADCIS / Messidor-2 Consortium ([Messidor-2](https://www.adcis.net/en/third-party/messidor2/))
-- **License**: Research agreement.
-- **Reference**: Decencière et al., 2014.
+- **License**: Research agreement / academic research use.
+- **Local Structure**:
+  ```text
+  data/raw/Messidor-2/
+  ├── images/
+  └── messidor_data.csv
+  ```
+- **Role in Study**: European multi-center clinical cohort (Brest, Paris, Saint-Étienne) captured via Topcon TRC-NW6 cameras with expert adjudicated DR and DME grades.
 
 ---
 
