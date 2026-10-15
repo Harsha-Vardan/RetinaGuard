@@ -117,11 +117,11 @@ class RetinaGuardTrainer:
         num_classes: int = 5,
         num_domains: int = 2,
         latent_dim: int = 256,
-        lambda_lesion: float = 1.0,
+        lambda_lesion: float = 2.0,
         lambda_domain: float = 0.5,
-        lambda_adv: float = 0.25,
-        lambda_cov: float = 0.1,
-        lr: float = 0.0001,
+        lambda_adv: float = 0.2,
+        lambda_cov: float = 0.05,
+        lr: float = 0.0002,
         weight_decay: float = 0.0001,
         seed: int = 42,
     ):
@@ -131,6 +131,7 @@ class RetinaGuardTrainer:
         self.lambda_domain = lambda_domain
         self.lambda_adv = lambda_adv
         self.lambda_cov = lambda_cov
+        self.class_weights: Optional[torch.Tensor] = None
 
         self.model = RetinaGuardModel(
             architecture=architecture,
@@ -140,9 +141,24 @@ class RetinaGuardTrainer:
             pretrained=True,
         ).to(self.device)
 
+        # Discriminative learning rates: backbone adapts smoothly while novel heads learn quickly
+        backbone_params = [
+            p for n, p in self.model.named_parameters()
+            if any(k in n for k in ["stem", "layer1", "layer2", "layer3", "layer4"])
+        ]
+        head_params = [
+            p for n, p in self.model.named_parameters()
+            if not any(k in n for k in ["stem", "layer1", "layer2", "layer3", "layer4"])
+        ]
+
         self.optimizer = torch.optim.AdamW(
-            self.model.parameters(), lr=lr, weight_decay=weight_decay
+            [
+                {"params": backbone_params, "lr": lr * 0.5},
+                {"params": head_params, "lr": lr * 2.0},
+            ],
+            weight_decay=weight_decay,
         )
+        self.scheduler: Optional[torch.optim.lr_scheduler._LRScheduler] = None
 
         self.experiment_id = datetime.now().strftime("retinaguard_%Y%m%d_%H%M%S")
         self.experiment_dir = PROJECT_ROOT / "experiments" / "retinaguard" / self.experiment_id
@@ -151,7 +167,15 @@ class RetinaGuardTrainer:
         logger.info(f"Initialized RetinaGuard Framework on {self.device}")
         logger.info(f"Experiment dir: {self.experiment_dir}")
 
-    def train_epoch(self, loader: DataLoader, alpha: float) -> dict[str, float]:
+    def train_epoch(
+        self,
+        loader: DataLoader,
+        alpha: float,
+        cur_lambda_lesion: float,
+        cur_lambda_adv: float,
+        cur_lambda_cov: float,
+        cur_lambda_domain: float,
+    ) -> dict[str, float]:
         self.model.train()
         total_loss = 0.0
         disease_loss_sum = 0.0
@@ -169,8 +193,10 @@ class RetinaGuardTrainer:
             self.optimizer.zero_grad()
             out = self.model(images, alpha=alpha)
 
-            # 1. Disease grading loss
-            loss_disease = F.cross_entropy(out["disease_logits"], dr_grades)
+            # 1. Disease grading loss with class frequency balance
+            loss_disease = F.cross_entropy(
+                out["disease_logits"], dr_grades, weight=self.class_weights
+            )
 
             # 2. Lesion attention supervision loss
             loss_lesion = compute_lesion_loss(out["attn_logits"], masks, has_masks)
@@ -178,22 +204,23 @@ class RetinaGuardTrainer:
             # 3. Domain classification loss on Z_domain
             loss_domain = F.cross_entropy(out["domain_logits"], domain_ids)
 
-            # 4. Domain adversarial loss on Z_disease
+            # 4. Domain adversarial loss on Z_disease via GRL
             loss_adv = F.cross_entropy(out["adv_domain_logits"], domain_ids)
 
             # 5. Independence covariance penalty
             loss_cov = compute_covariance_penalty(out["z_disease"], out["z_domain"])
 
-            # Total joint loss
+            # Total joint loss with warmup scaling
             loss = (
                 loss_disease
-                + self.lambda_lesion * loss_lesion
-                + self.lambda_domain * loss_domain
-                + self.lambda_adv * loss_adv
-                + self.lambda_cov * loss_cov
+                + cur_lambda_lesion * loss_lesion
+                + cur_lambda_domain * loss_domain
+                + cur_lambda_adv * loss_adv
+                + cur_lambda_cov * loss_cov
             )
 
             loss.backward()
+            torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=2.0)
             self.optimizer.step()
 
             batch_size = images.size(0)
@@ -225,7 +252,9 @@ class RetinaGuardTrainer:
             dr_grades = batch["dr_grade"].to(self.device)
 
             out = self.model(images, alpha=0.0)
-            loss_disease = F.cross_entropy(out["disease_logits"], dr_grades)
+            loss_disease = F.cross_entropy(
+                out["disease_logits"], dr_grades, weight=self.class_weights
+            )
             val_loss += loss_disease.item() * images.size(0)
 
             probs = F.softmax(out["disease_logits"], dim=1)
@@ -235,7 +264,7 @@ class RetinaGuardTrainer:
             all_targets.extend(dr_grades.cpu().numpy())
             all_probs.extend(probs.cpu().numpy())
 
-        val_loss /= len(loader.dataset)
+        val_loss /= max(1, len(loader.dataset))
         metrics = compute_dr_metrics(
             np.array(all_targets), np.array(all_preds), np.array(all_probs), num_classes=5
         )
@@ -247,13 +276,28 @@ class RetinaGuardTrainer:
         val_df: pd.DataFrame,
         epochs: int = 10,
         batch_size: int = 16,
-        image_size: int = 512,
+        image_size: int = 256,
+        warmup_epochs: int = 2,
     ) -> dict[str, Any]:
+        # Compute smooth inverse frequency class weights to prevent majority collapse
+        grades = train_df["dr_grade"].dropna().astype(int).values
+        counts = np.bincount(grades, minlength=5).astype(float)
+        counts = np.maximum(counts, 1.0)
+        raw_weights = len(grades) / (5.0 * counts)
+        smooth_weights = np.sqrt(raw_weights)
+        smooth_weights = smooth_weights / smooth_weights.mean()
+        self.class_weights = torch.tensor(smooth_weights, dtype=torch.float32, device=self.device)
+        logger.info(f"Class-balanced weights: {[round(w, 3) for w in smooth_weights.tolist()]}")
+
         train_ds = RetinaGuardDataset(train_df, image_size=image_size, is_training=True)
         val_ds = RetinaGuardDataset(val_df, image_size=image_size, is_training=False)
 
         train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True, num_workers=0)
         val_loader = DataLoader(val_ds, batch_size=batch_size, shuffle=False, num_workers=0)
+
+        self.scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+            self.optimizer, T_max=epochs, eta_min=1e-6
+        )
 
         best_qwk = -1.0
         best_epoch = 0
@@ -261,30 +305,61 @@ class RetinaGuardTrainer:
         logger.info(f"Starting RetinaGuard training: {len(train_ds)} train, {len(val_ds)} val, {epochs} epochs")
 
         for epoch in range(1, epochs + 1):
-            # Dynamic GRL schedule p: alpha ranges 0 to 1
+            # Dynamic GRL schedule: alpha ranges 0 to 1
             p = float(epoch - 1) / max(1, epochs)
-            alpha = 2.0 / (1.0 + np.exp(-10 * p)) - 1.0
+            alpha = float(2.0 / (1.0 + np.exp(-10 * p)) - 1.0)
 
-            losses = self.train_epoch(train_loader, alpha=alpha)
+            # Adversarial Warmup Schedule: let disease features & lesion attention form first
+            if epoch <= warmup_epochs:
+                cur_adv = 0.0
+                cur_cov = 0.0
+                cur_dom = 0.1
+                cur_les = self.lambda_lesion
+            else:
+                frac = float(epoch - warmup_epochs) / max(1, epochs - warmup_epochs)
+                cur_adv = self.lambda_adv * frac
+                cur_cov = self.lambda_cov * frac
+                cur_dom = self.lambda_domain
+                cur_les = self.lambda_lesion
+
+            losses = self.train_epoch(
+                train_loader,
+                alpha=alpha,
+                cur_lambda_lesion=cur_les,
+                cur_lambda_adv=cur_adv,
+                cur_lambda_cov=cur_cov,
+                cur_lambda_domain=cur_dom,
+            )
             val_metrics, val_loss = self.evaluate(val_loader)
+            self.scheduler.step()
 
             qwk = val_metrics["quadratic_weighted_kappa"]
             acc = val_metrics["accuracy"]
 
             logger.info(
                 f"Epoch {epoch:2d}/{epochs} | "
-                f"Loss: {losses['total_loss']:.4f} (Dis: {losses['disease_loss']:.3f}, Les: {losses['lesion_loss']:.3f}, Cov: {losses['cov_loss']:.3f}) | "
+                f"Loss: {losses['total_loss']:.4f} (Dis: {losses['disease_loss']:.3f}, Les: {losses['lesion_loss']:.3f}, Adv: {losses['cov_loss']:.3f}) | "
                 f"Val Loss: {val_loss:.4f} | Val Acc: {acc:.4f} | Val QWK: {qwk:.4f}"
             )
 
-            if qwk > best_qwk:
+            # Track and save best checkpoint based on QWK (or accuracy if QWK tied)
+            is_better = (qwk > best_qwk) or (abs(qwk - best_qwk) < 1e-4 and acc > 0.5)
+            if is_better or epoch == 1:
                 best_qwk = qwk
                 best_epoch = epoch
+                # Save to run experiment directory
                 save_checkpoint(
                     self.model, self.optimizer, epoch, val_metrics,
                     {"architecture": "retinaguard_resnet18"}, self.experiment_dir, "best_retinaguard.pth"
                 )
-                logger.info(f"  -> Saved new best RetinaGuard model (Val QWK: {qwk:.4f})")
+                # Also save to canonical experiments/retinaguard/ directory for all downstream evaluation
+                canonical_dir = PROJECT_ROOT / "experiments" / "retinaguard"
+                canonical_dir.mkdir(parents=True, exist_ok=True)
+                save_checkpoint(
+                    self.model, self.optimizer, epoch, val_metrics,
+                    {"architecture": "retinaguard_resnet18"}, canonical_dir, "best_retinaguard.pth"
+                )
+                logger.info(f"  -> Saved new best RetinaGuard model (Val QWK: {qwk:.4f}, Acc: {acc:.4f})")
 
         logger.info(f"Training completed. Best Epoch: {best_epoch}, Best QWK: {best_qwk:.4f}")
         return {"best_epoch": best_epoch, "best_qwk": best_qwk, "experiment_dir": str(self.experiment_dir)}
@@ -294,6 +369,9 @@ def main():
     parser = argparse.ArgumentParser(description="Train RetinaGuard Unified Model")
     parser.add_argument("--epochs", type=int, default=10)
     parser.add_argument("--batch-size", type=int, default=16)
+    parser.add_argument("--image-size", type=int, default=256)
+    parser.add_argument("--max-samples", type=int, default=None)
+    parser.add_argument("--warmup-epochs", type=int, default=2)
     parser.add_argument("--smoke-test", action="store_true")
     args = parser.parse_args()
 
@@ -303,19 +381,44 @@ def main():
         sys.exit(1)
 
     df = pd.read_csv(metadata_path)
-    train_df = df[df["split"] == "train"]
-    val_df = df[df["split"] == "val"]
+    train_df = df[df["split"] == "train"].copy()
+    val_df = df[df["split"] == "val"].copy()
 
     epochs = 2 if args.smoke_test else args.epochs
     batch_size = 8 if args.smoke_test else args.batch_size
+    image_size = args.image_size
 
     if args.smoke_test:
         train_df = train_df.head(24)
         val_df = val_df.head(12)
         logger.info("Executing RetinaGuard Smoke Test Mode")
+    elif args.max_samples and len(train_df) > args.max_samples:
+        per_class_idrid = max(10, (args.max_samples // 10))
+        per_class_aptos = max(10, (args.max_samples // 10))
+        train_dfs = []
+        for g in range(5):
+            idrid_g = train_df[(train_df["dr_grade"] == g) & (train_df["dataset_id"] == "IDRiD")].head(per_class_idrid)
+            aptos_g = train_df[(train_df["dr_grade"] == g) & (train_df["dataset_id"] == "APTOS")].head(per_class_aptos)
+            train_dfs.extend([idrid_g, aptos_g])
+        train_df = pd.concat(train_dfs, ignore_index=True)
+
+        val_dfs = []
+        for g in range(5):
+            idrid_val = val_df[(val_df["dr_grade"] == g) & (val_df["dataset_id"] == "IDRiD")].head(10)
+            aptos_val = val_df[(val_df["dr_grade"] == g) & (val_df["dataset_id"] == "APTOS")].head(10)
+            val_dfs.extend([idrid_val, aptos_val])
+        val_df = pd.concat(val_dfs, ignore_index=True)
+        logger.info(f"Multi-Center Balanced Cohort: {len(train_df)} train ({train_df['dataset_id'].value_counts().to_dict()}), {len(val_df)} val")
 
     trainer = RetinaGuardTrainer()
-    trainer.fit(train_df, val_df, epochs=epochs, batch_size=batch_size)
+    trainer.fit(
+        train_df,
+        val_df,
+        epochs=epochs,
+        batch_size=batch_size,
+        image_size=image_size,
+        warmup_epochs=args.warmup_epochs,
+    )
 
 
 if __name__ == "__main__":

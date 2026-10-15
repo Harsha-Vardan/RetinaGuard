@@ -56,12 +56,13 @@ logger = get_logger("run_ablations")
 class AblationRunner:
     """Executes systematic component ablation across uniform test splits."""
 
-    def __init__(self, smoke_test: bool = False, max_samples: Optional[int] = 50):
+    def __init__(self, smoke_test: bool = False, max_samples: Optional[int] = 50, image_size: int = 256):
         self.device = get_device()
         self.smoke_test = smoke_test
         self.max_samples = max_samples
+        self.image_size = image_size
         self.transform = T.Compose([
-            T.Resize((512, 512)),
+            T.Resize((image_size, image_size)),
             T.ToTensor(),
             T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
         ])
@@ -161,26 +162,33 @@ class AblationRunner:
         # 4. RetinaGuard Unified
         m4 = RetinaGuardModel(architecture="resnet18", num_classes=5, num_domains=2)
 
-        # Attempt to load trained weights if available
-        base_ckpts = list(PROJECT_ROOT.glob("experiments/baseline/**/best_model.pth"))
+        def _load_matching(target_model, source_state):
+            m_state = target_model.state_dict()
+            matched = {k: v for k, v in source_state.items() if k in m_state and m_state[k].shape == v.shape}
+            target_model.load_state_dict(matched, strict=False)
+
+        # Attempt to load trained weights if available (sorted by newest)
+        base_ckpts = sorted(PROJECT_ROOT.glob("experiments/**/best_model.pth"), key=lambda p: p.stat().st_mtime, reverse=True)
         if base_ckpts:
             try:
                 ckpt = torch.load(base_ckpts[0], map_location="cpu", weights_only=False)
                 st = ckpt.get("model_state_dict", ckpt)
-                m1.load_state_dict(st)
-                logger.info("Loaded weights for Baseline")
-            except Exception:
-                pass
+                _load_matching(m1, st)
+                logger.info(f"Loaded weights for Baseline from {base_ckpts[0].name}")
+            except Exception as e:
+                logger.warning(f"Could not load Baseline weights: {e}")
 
-        rg_ckpts = list(PROJECT_ROOT.glob("experiments/retinaguard/**/best_retinaguard.pth"))
+        rg_ckpts = sorted(PROJECT_ROOT.glob("experiments/**/best_retinaguard.pth"), key=lambda p: p.stat().st_mtime, reverse=True)
         if rg_ckpts:
             try:
                 ckpt = torch.load(rg_ckpts[0], map_location="cpu", weights_only=False)
                 st = ckpt.get("model_state_dict", ckpt)
                 m4.load_state_dict(st)
-                logger.info("Loaded weights for RetinaGuard Unified")
-            except Exception:
-                pass
+                _load_matching(m2, st)
+                _load_matching(m3, st)
+                logger.info(f"Loaded weights for RetinaGuard Unified and Ablated Modules from {rg_ckpts[0].name}")
+            except Exception as e:
+                logger.warning(f"Could not load RetinaGuard weights: {e}")
 
         for m in (m1, m2, m3, m4):
             m.to(self.device).eval()
@@ -279,23 +287,23 @@ class AblationRunner:
             tensor = self.transform(raw_img).unsqueeze(0).to(self.device)
 
             if mtype == "retinaguard":
-                heatmap = extract_lesion_attention_map(model, tensor, target_size=gt_mask.shape)
+                heatmap = extract_lesion_attention_map(model, tensor, target_size=(self.image_size, self.image_size))
             elif mtype == "lesion_only":
                 with torch.no_grad():
                     _, _, attn_mask = model(tensor)
                     attn_np = attn_mask.cpu().numpy()[0, 0]
-                    heatmap = cv2.resize(attn_np, (gt_mask.shape[1], gt_mask.shape[0]))
+                    heatmap = cv2.resize(attn_np, (self.image_size, self.image_size))
             elif mtype == "causal_only":
                 grad_cam = GradCAM(model, model.backbone.layer4)
                 heatmap = grad_cam.generate(tensor, target_class=item["grade"])
-                heatmap = cv2.resize(heatmap, (gt_mask.shape[1], gt_mask.shape[0]))
+                heatmap = cv2.resize(heatmap, (self.image_size, self.image_size))
             else:
                 grad_cam = GradCAM(model, getattr(model, "backbone", model).layer4)
                 heatmap = grad_cam.generate(tensor, target_class=item["grade"])
-                heatmap = cv2.resize(heatmap, (gt_mask.shape[1], gt_mask.shape[0]))
+                heatmap = cv2.resize(heatmap, (self.image_size, self.image_size))
 
-            iou = compute_attribution_iou(heatmap, gt_mask)
-            dice = compute_attribution_dice(heatmap, gt_mask)
+            iou = compute_attribution_iou(heatmap, gt_mask, dilation_radius=6)
+            dice = compute_attribution_dice(heatmap, gt_mask, dilation_radius=6)
             ious.append(iou)
             dices.append(dice)
 

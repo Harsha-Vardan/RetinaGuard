@@ -10,21 +10,21 @@ model:
 
 training:
   # Data
-  image_size: [512, 512]
+  image_size: [256, 256]
   batch_size: 16
-  num_workers: 4
+  num_workers: 0
 
   # Optimization
   optimizer: "adam"
-  learning_rate: 0.0001
+  learning_rate: 0.0002
   weight_decay: 0.0001
   scheduler: "cosine"
   scheduler_params:
-    T_max: 50
+    T_max: 5
     eta_min: 0.000001
 
   # Training
-  epochs: 50
+  epochs: 5
   early_stopping:
     enabled: true
     patience: 10

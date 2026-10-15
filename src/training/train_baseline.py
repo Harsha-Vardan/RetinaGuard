@@ -322,6 +322,12 @@ class Trainer:
                         self.model, optimizer, epoch, val_metrics, self.config,
                         self.experiment_dir, "best_model.pth", scheduler
                     )
+                    canonical_base_dir = PROJECT_ROOT / "experiments" / "baseline"
+                    canonical_base_dir.mkdir(parents=True, exist_ok=True)
+                    save_checkpoint(
+                        self.model, optimizer, epoch, val_metrics, self.config,
+                        canonical_base_dir, "best_model.pth", scheduler
+                    )
                     logger.info(f"  -> New best model saved ({monitor}: {current_metric:.4f})")
             else:
                 self.patience_counter += 1

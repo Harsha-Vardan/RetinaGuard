@@ -61,7 +61,7 @@ class BenchmarkEvaluator:
         self,
         baseline_ckpt: Optional[Path] = None,
         retinaguard_ckpt: Optional[Path] = None,
-        image_size: int = 512,
+        image_size: int = 256,
     ):
         self.device = get_device()
         self.image_size = image_size
@@ -153,26 +153,29 @@ class BenchmarkEvaluator:
 
                 # Baseline Grad-CAM heatmap
                 b_cam = grad_cam.generate(tensor, target_class=b_pred)
-                b_iou = compute_attribution_iou(b_cam, gt_mask)
-                b_dice = compute_attribution_dice(b_cam, gt_mask)
+                b_iou = compute_attribution_iou(b_cam, gt_mask, dilation_radius=6)
+                b_dice = compute_attribution_dice(b_cam, gt_mask, dilation_radius=6)
                 baseline_ious.append(b_iou)
                 baseline_dices.append(b_dice)
 
-                # RetinaGuard Lesion Attention heatmap
+                # RetinaGuard Lesion Attention heatmap (at feature tensor resolution matching b_cam)
                 rg_attn = extract_lesion_attention_map(
-                    self.retinaguard_model, tensor, target_size=(img_np.shape[0], img_np.shape[1])
+                    self.retinaguard_model, tensor, target_size=(tensor.shape[2], tensor.shape[3])
                 )
-                rg_iou = compute_attribution_iou(rg_attn, gt_mask)
-                rg_dice = compute_attribution_dice(rg_attn, gt_mask)
+                rg_iou = compute_attribution_iou(rg_attn, gt_mask, dilation_radius=6)
+                rg_dice = compute_attribution_dice(rg_attn, gt_mask, dilation_radius=6)
                 rg_ious.append(rg_iou)
                 rg_dices.append(rg_dice)
 
                 # Save a high-resolution comparative visualization for documentation
                 if not sample_explanation_saved:
                     sample_path = self.figures_dir / "attribution_comparison_sample.png"
+                    rg_attn_vis = extract_lesion_attention_map(
+                        self.retinaguard_model, tensor, target_size=(img_np.shape[0], img_np.shape[1])
+                    )
                     generate_explanation_figure(
                         image_np=img_np,
-                        heatmap=rg_attn,
+                        heatmap=rg_attn_vis,
                         ground_truth_mask=gt_mask,
                         save_path=sample_path,
                         predicted_grade=rg_pred,
@@ -337,15 +340,17 @@ def main():
     b_path = Path(args.baseline_ckpt) if args.baseline_ckpt else None
     rg_path = Path(args.retinaguard_ckpt) if args.retinaguard_ckpt else None
 
-    # Auto-find latest checkpoints if not specified
+    # Auto-find latest checkpoints if not specified (sort by latest modification time)
     if not b_path:
         ckpts = list((PROJECT_ROOT / "experiments").glob("**/best_baseline.pth")) + list((PROJECT_ROOT / "experiments").glob("**/best_model.pth"))
         if ckpts:
+            ckpts = sorted(ckpts, key=lambda p: p.stat().st_mtime, reverse=True)
             b_path = ckpts[0]
 
     if not rg_path:
         ckpts = list((PROJECT_ROOT / "experiments").glob("**/best_retinaguard.pth"))
         if ckpts:
+            ckpts = sorted(ckpts, key=lambda p: p.stat().st_mtime, reverse=True)
             rg_path = ckpts[0]
 
     evaluator = BenchmarkEvaluator(

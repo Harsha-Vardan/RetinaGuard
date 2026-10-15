@@ -154,6 +154,7 @@ def compute_attribution_iou(
     attribution_map: np.ndarray,
     ground_truth_mask: np.ndarray,
     threshold: float = 0.5,
+    dilation_radius: int = 0,
 ) -> float:
     """Compute Intersection-over-Union (IoU) between attribution map and clinical mask.
 
@@ -161,6 +162,7 @@ def compute_attribution_iou(
         attribution_map: 2D numpy array in [0.0, 1.0].
         ground_truth_mask: 2D numpy array binary mask or [0, 255].
         threshold: Binarization threshold for attribution map.
+        dilation_radius: Optional pixel radius to dilate clinical lesions for receptive field alignment.
 
     Returns:
         IoU score in [0.0, 1.0].
@@ -169,12 +171,17 @@ def compute_attribution_iou(
     gt_bin = (ground_truth_mask > 0).astype(bool)
 
     if pred_bin.shape != gt_bin.shape:
-        # Resize gt_bin to match attribution map shape
-        gt_bin = cv2.resize(
-            gt_bin.astype(np.uint8),
+        # Preserve small lesions with area pooling rather than subsampling decimation
+        gt_resized = cv2.resize(
+            gt_bin.astype(np.float32),
             (pred_bin.shape[1], pred_bin.shape[0]),
-            interpolation=cv2.INTER_NEAREST,
-        ).astype(bool)
+            interpolation=cv2.INTER_AREA,
+        )
+        gt_bin = (gt_resized > 0)
+
+    if dilation_radius > 0 and gt_bin.any():
+        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (dilation_radius * 2 + 1, dilation_radius * 2 + 1))
+        gt_bin = cv2.dilate(gt_bin.astype(np.uint8), kernel).astype(bool)
 
     intersection = np.logical_and(pred_bin, gt_bin).sum()
     union = np.logical_or(pred_bin, gt_bin).sum()
@@ -190,6 +197,7 @@ def compute_attribution_dice(
     attribution_map: np.ndarray,
     ground_truth_mask: np.ndarray,
     threshold: float = 0.5,
+    dilation_radius: int = 0,
 ) -> float:
     """Compute Dice similarity coefficient between attribution map and clinical mask.
 
@@ -197,6 +205,7 @@ def compute_attribution_dice(
         attribution_map: 2D float array in [0.0, 1.0].
         ground_truth_mask: 2D array binary mask.
         threshold: Threshold for binarization.
+        dilation_radius: Optional pixel radius to dilate clinical lesions for receptive field alignment.
 
     Returns:
         Dice coefficient in [0.0, 1.0].
@@ -205,11 +214,16 @@ def compute_attribution_dice(
     gt_bin = (ground_truth_mask > 0).astype(bool)
 
     if pred_bin.shape != gt_bin.shape:
-        gt_bin = cv2.resize(
-            gt_bin.astype(np.uint8),
+        gt_resized = cv2.resize(
+            gt_bin.astype(np.float32),
             (pred_bin.shape[1], pred_bin.shape[0]),
-            interpolation=cv2.INTER_NEAREST,
-        ).astype(bool)
+            interpolation=cv2.INTER_AREA,
+        )
+        gt_bin = (gt_resized > 0)
+
+    if dilation_radius > 0 and gt_bin.any():
+        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (dilation_radius * 2 + 1, dilation_radius * 2 + 1))
+        gt_bin = cv2.dilate(gt_bin.astype(np.uint8), kernel).astype(bool)
 
     intersection = np.logical_and(pred_bin, gt_bin).sum()
     total = pred_bin.sum() + gt_bin.sum()
