@@ -114,3 +114,23 @@ def test_save_metrics_io(tmp_path):
     assert loaded["accuracy"] == 0.88
     assert loaded["qwk"] == 0.85
 
+
+def test_compute_bootstrap_ci():
+    """Verify non-parametric bootstrap confidence interval estimation."""
+    from src.evaluation.metrics import compute_bootstrap_ci
+
+    y_true = np.array([0, 1, 2, 3, 4] * 10)
+    y_pred = np.array([0, 1, 2, 3, 4] * 10)
+
+    # 50 iterations for fast unit test
+    ci_results = compute_bootstrap_ci(y_true, y_pred, n_bootstraps=50, confidence_level=0.95)
+
+    assert "quadratic_weighted_kappa" in ci_results
+    assert "accuracy" in ci_results
+    assert "macro_f1" in ci_results
+    assert ci_results["accuracy"]["mean"] == pytest.approx(1.0)
+    assert ci_results["accuracy"]["ci_lower"] == pytest.approx(1.0)
+    assert ci_results["accuracy"]["ci_upper"] == pytest.approx(1.0)
+    assert ci_results["quadratic_weighted_kappa"]["mean"] == pytest.approx(1.0)
+
+

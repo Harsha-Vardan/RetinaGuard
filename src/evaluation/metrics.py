@@ -204,3 +204,81 @@ def format_metrics_report(metrics: dict, title: str = "DR Classification Metrics
         lines.append(f"{class_name:<15} {prec:>6.3f} {rec:>6.3f} {sens:>6.3f} {spec:>6.3f} {n:>5}")
 
     return "\n".join(lines)
+
+
+def compute_bootstrap_ci(
+    y_true: np.ndarray,
+    y_pred: np.ndarray,
+    y_prob: np.ndarray | None = None,
+    n_bootstraps: int = 1000,
+    confidence_level: float = 0.95,
+    seed: int = 42,
+) -> dict[str, dict[str, float]]:
+    """Compute non-parametric empirical bootstrap confidence intervals (CI).
+
+    Standard for peer-reviewed medical AI publications (e.g., IEEE TMI, Nature Medicine)
+    to report 95% Confidence Intervals for QWK, Accuracy, Macro-F1, and Referable Sensitivity.
+
+    Args:
+        y_true: Ground truth labels (N,).
+        y_pred: Predicted labels (N,).
+        y_prob: Predicted probabilities (N, num_classes).
+        n_bootstraps: Number of bootstrap iterations (default 1000).
+        confidence_level: Target confidence interval (default 0.95).
+        seed: Random seed.
+
+    Returns:
+        Dictionary mapping metric names to {'mean', 'std', 'ci_lower', 'ci_upper'}.
+    """
+    rng = np.random.RandomState(seed)
+    n_samples = len(y_true)
+    alpha = (1.0 - confidence_level) / 2.0
+
+    boot_qwk = []
+    boot_acc = []
+    boot_f1 = []
+    boot_ref_sens = []
+
+    for _ in range(n_bootstraps):
+        idx = rng.randint(0, n_samples, size=n_samples)
+        b_true = y_true[idx]
+        b_pred = y_pred[idx]
+
+        # Ensure at least 2 distinct classes in bootstrap sample
+        if len(np.unique(b_true)) < 2:
+            continue
+
+        try:
+            boot_qwk.append(cohen_kappa_score(b_true, b_pred, weights="quadratic"))
+            boot_acc.append(accuracy_score(b_true, b_pred))
+            boot_f1.append(f1_score(b_true, b_pred, average="macro", zero_division=0))
+
+            if y_prob is not None:
+                b_prob = y_prob[idx]
+                ref_m = compute_referable_dr_metrics(b_true, b_prob)
+                boot_ref_sens.append(ref_m["referable_sens_at_90_spec"])
+        except Exception:
+            continue
+
+    def _calc_stats(values: list[float]) -> dict[str, float]:
+        if not values:
+            return {"mean": 0.0, "std": 0.0, "ci_lower": 0.0, "ci_upper": 0.0}
+        arr = np.array(values)
+        return {
+            "mean": round(float(np.mean(arr)), 4),
+            "std": round(float(np.std(arr)), 4),
+            "ci_lower": round(float(np.percentile(arr, alpha * 100)), 4),
+            "ci_upper": round(float(np.percentile(arr, (1.0 - alpha) * 100)), 4),
+        }
+
+    results = {
+        "quadratic_weighted_kappa": _calc_stats(boot_qwk),
+        "accuracy": _calc_stats(boot_acc),
+        "macro_f1": _calc_stats(boot_f1),
+    }
+
+    if boot_ref_sens:
+        results["referable_sens_at_90_spec"] = _calc_stats(boot_ref_sens)
+
+    return results
+

@@ -10,6 +10,7 @@ import torch
 from src.data.create_mock_data import generate_synthetic_fundus
 from src.evaluation.evaluate_cross_domain import CrossDomainEvaluator
 from src.models.baseline import DRClassifier
+from src.models.retinaguard import RetinaGuardModel
 
 
 @pytest.fixture
@@ -47,8 +48,8 @@ def test_cross_domain_evaluator_empty_dataset():
     assert res["error"] == "no_valid_samples"
 
 
-def test_cross_domain_evaluator_evaluate_model(dummy_test_df):
-    """Verify evaluation loop computes metrics and returns results dict."""
+def test_cross_domain_evaluator_evaluate_baseline(dummy_test_df):
+    """Verify evaluation loop computes metrics and returns results dict for Baseline."""
     evaluator = CrossDomainEvaluator()
     model = DRClassifier(architecture="resnet18", num_classes=5, pretrained=False)
 
@@ -66,3 +67,26 @@ def test_cross_domain_evaluator_evaluate_model(dummy_test_df):
     assert "quadratic_weighted_kappa" in results
     assert "macro_f1" in results
     assert results["num_samples"] == len(dummy_test_df)
+    assert "bootstrap_ci_95" in results
+
+
+def test_cross_domain_evaluator_evaluate_retinaguard(dummy_test_df):
+    """Verify evaluation loop unpacks dictionary logits and computes metrics for RetinaGuardModel."""
+    evaluator = CrossDomainEvaluator()
+    model = RetinaGuardModel(architecture="resnet18", num_classes=5, num_domains=2, pretrained=False)
+
+    results = evaluator.evaluate_model(
+        model=model,
+        test_df=dummy_test_df,
+        dataset_name="retinaguard_test",
+        image_size=128,
+        batch_size=2,
+        model_name="RetinaGuard",
+    )
+
+    assert "dataset" in results
+    assert results["dataset"] == "retinaguard_test"
+    assert "accuracy" in results
+    assert "quadratic_weighted_kappa" in results
+    assert "bootstrap_ci_95" in results
+    assert "quadratic_weighted_kappa" in results["bootstrap_ci_95"]
