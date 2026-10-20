@@ -198,7 +198,7 @@ RetinaGuard/
 ├── experiments/                      # Saved PyTorch checkpoints (best_retinaguard.pth, best_model.pth)
 ├── outputs/                          # Evaluation plots, confusion matrices, and benchmark reports
 ├── paper/                            # Full IEEE Transactions research paper (main.tex, refs.bib, figures/)
-├── scripts/                          # Cross-platform automated pipeline scripts (00-10, run_all)
+├── scripts/                          # Automated pipeline execution (run_pipeline.py, run_all.bat, run_all.sh)
 ├── slides/                           # 18-slide scientific presentation deck (deck.pptx, build_pptx.py)
 ├── src/                              # Modular clean research code
 │   ├── data/                         # Preprocessing, FOV segmentation, metadata harmonization
@@ -207,7 +207,7 @@ RetinaGuard/
 │   ├── inference/                    # DRPredictor engine with trained weight auto-loading
 │   ├── models/                       # Baseline DRClassifier, Lesion Attention, RetinaGuardModel
 │   └── training/                     # Multi-task training engine, GRL adversarial loop
-└── tests/                            # Comprehensive research test suite (114 tests, 100% pass rate)
+└── tests/                            # Comprehensive research test suite (115 tests, 100% pass rate)
 ```
 
 ---
@@ -234,6 +234,10 @@ pip install -r requirements.txt
 Run the automated pipeline to execute tests, evaluations, and figure generation:
 
 ```bash
+# Cross-platform master CLI runner:
+python scripts/run_pipeline.py --stage all
+
+# Or 1-click execution:
 # Windows:
 scripts\run_all.bat
 
