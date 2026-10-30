@@ -200,6 +200,27 @@
               </div>
             </div>
 
+            <!-- Conformal Risk-Controlled Prediction Set -->
+            <div class="conformal-box" id="res-conformal-box">
+              <div class="conformal-header">
+                <span class="conformal-title">
+                  <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                  </svg>
+                  Conformal Risk Guarantee (1 - α = 90%)
+                </span>
+                <span class="conformal-badge safe" id="res-conformal-badge">CERTIFIED SAFE</span>
+              </div>
+              <div class="conformal-body">
+                <div class="conformal-set-pills" id="res-conformal-pills">
+                  <!-- Populated dynamically -->
+                </div>
+                <div class="conformal-note" id="res-conformal-note">
+                  Finite-sample risk control: true disease grade guaranteed inside set with ≥ 90% probability.
+                </div>
+              </div>
+            </div>
+
             <!-- Grade Probabilities Distribution -->
             <div class="prob-distribution">
               <span class="section-label">Posterior Probability Distribution Across DR Severities:</span>

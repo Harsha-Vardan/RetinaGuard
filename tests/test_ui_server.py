@@ -99,6 +99,13 @@ def test_process_and_predict_retinaguard(engine, dummy_fundus_image):
     assert "preprocessed" in res["images"]
     assert "heatmap" in res["images"]
     assert "overlay" in res["images"]
+    assert "conformal_prediction" in res
+    cp = res["conformal_prediction"]
+    assert cp["target_coverage"] == 0.90
+    assert "prediction_set" in cp
+    assert len(cp["prediction_set"]) >= 1
+    assert "safety_status" in cp
+    assert "requires_specialist_review" in cp
 
 
 def test_process_and_predict_baseline(engine, dummy_fundus_image):

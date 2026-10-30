@@ -50,6 +50,7 @@ class RetinaGuardModel(nn.Module):
         self.num_domains = num_domains
         self.latent_dim = latent_dim
 
+        self.architecture = architecture
         # Backbone
         if architecture == "resnet18":
             weights = models.ResNet18_Weights.DEFAULT if pretrained else None
@@ -60,8 +61,30 @@ class RetinaGuardModel(nn.Module):
             self.layer3 = base.layer3
             self.layer4 = base.layer4
             in_features = 512
+        elif architecture == "resnet50":
+            weights = models.ResNet50_Weights.DEFAULT if pretrained else None
+            base = models.resnet50(weights=weights)
+            self.stem = nn.Sequential(base.conv1, base.bn1, base.relu, base.maxpool)
+            self.layer1 = base.layer1
+            self.layer2 = base.layer2
+            self.layer3 = base.layer3
+            self.layer4 = base.layer4
+            in_features = 2048
+        elif architecture == "efficientnet_b0":
+            weights = models.EfficientNet_B0_Weights.DEFAULT if pretrained else None
+            base = models.efficientnet_b0(weights=weights)
+            self.backbone_features = base.features
+            in_features = 1280
+        elif architecture == "convnext_tiny":
+            weights = models.ConvNeXt_Tiny_Weights.DEFAULT if pretrained else None
+            base = models.convnext_tiny(weights=weights)
+            self.backbone_features = base.features
+            in_features = 768
         else:
-            raise ValueError(f"Unsupported architecture: {architecture}")
+            raise ValueError(
+                f"Unsupported architecture: {architecture}. "
+                "Supported: ['resnet18', 'resnet50', 'efficientnet_b0', 'convnext_tiny']"
+            )
 
         # Lesion spatial attention module
         self.lesion_attention = SpatialLesionAttention(in_channels=in_features)
@@ -177,6 +200,8 @@ class RetinaGuardModel(nn.Module):
 
     def extract_features(self, x: torch.Tensor) -> torch.Tensor:
         """Extract multi-scale convolutional feature maps."""
+        if hasattr(self, "backbone_features"):
+            return self.backbone_features(x)
         x = self.stem(x)
         x = self.layer1(x)
         x = self.layer2(x)

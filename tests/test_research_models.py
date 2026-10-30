@@ -121,3 +121,29 @@ def test_unified_retinaguard_model():
         if p.requires_grad:
             assert p.grad is not None
             assert not torch.isnan(p.grad).any()
+
+
+@pytest.mark.parametrize("arch", ["resnet50", "efficientnet_b0", "convnext_tiny"])
+def test_retinaguard_multi_backbones(arch):
+    """Verify RetinaGuard architecture invariance across ResNet-50, EfficientNet-B0, and ConvNeXt-Tiny."""
+    model = RetinaGuardModel(
+        architecture=arch,
+        num_classes=5,
+        num_domains=2,
+        latent_dim=128,
+        pretrained=False,
+    )
+    x = torch.randn(2, 3, 224, 224)
+    out = model(x, alpha=1.0)
+
+    assert out["disease_logits"].shape == (2, 5)
+    assert out["domain_logits"].shape == (2, 2)
+    assert out["adv_domain_logits"].shape == (2, 2)
+    assert out["z_disease"].shape == (2, 128)
+    assert out["z_domain"].shape == (2, 128)
+    assert out["attn_mask"].shape[1] == 1
+    assert out["attn_mask"].shape[0] == 2
+
+    # Verification of feature extraction
+    disease_feats = model.get_features(x)
+    assert disease_feats.shape == (2, 128)

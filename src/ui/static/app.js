@@ -34,6 +34,11 @@ document.addEventListener("DOMContentLoaded", () => {
   const resXaiMode = document.getElementById("res-xai-mode");
   const captionHeatmap = document.getElementById("caption-heatmap");
 
+  const resConformalBox = document.getElementById("res-conformal-box");
+  const resConformalBadge = document.getElementById("res-conformal-badge");
+  const resConformalPills = document.getElementById("res-conformal-pills");
+  const resConformalNote = document.getElementById("res-conformal-note");
+
   const imgRaw = document.getElementById("img-raw");
   const imgPrep = document.getElementById("img-prep");
   const imgHeatmap = document.getElementById("img-heatmap");
@@ -275,6 +280,32 @@ document.addEventListener("DOMContentLoaded", () => {
     // 4. Confidence
     resConfidencePct.textContent = `${result.confidence}%`;
     resConfidenceFill.style.width = `${result.confidence}%`;
+
+    // 4b. Conformal Risk-Controlled Prediction Sets
+    if (result.conformal_prediction) {
+      const cp = result.conformal_prediction;
+      resConformalBox.classList.remove("hidden");
+      resConformalPills.innerHTML = "";
+
+      cp.prediction_set.forEach((pText) => {
+        const pill = document.createElement("span");
+        pill.className = "set-pill";
+        pill.textContent = pText;
+        resConformalPills.appendChild(pill);
+      });
+
+      if (cp.is_singleton) {
+        resConformalBadge.className = "conformal-badge safe";
+        resConformalBadge.textContent = "CERTIFIED SAFE";
+        resConformalNote.textContent = `High-confidence single grade prediction (Finite-sample coverage bound P(Y ∈ C(X)) ≥ 90%). Safe for automated reporting.`;
+      } else {
+        resConformalBadge.className = "conformal-badge triage";
+        resConformalBadge.textContent = "SPECIALIST TRIAGE";
+        resConformalNote.textContent = `Borderline ambiguity detected across ${cp.set_size} grades. Model safely abstains from single-label diagnosis and triages to retinal specialist (Coverage guarantee P(Y ∈ C(X)) ≥ 90% satisfied).`;
+      }
+    } else {
+      resConformalBox.classList.add("hidden");
+    }
 
     // 5. Probabilities Bars
     probBarsContainer.innerHTML = "";

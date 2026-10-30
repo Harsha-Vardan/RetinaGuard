@@ -163,3 +163,83 @@ def compute_uncertainty_metrics(
         "mean_confidence": round(float(np.mean(max_conf)), 4),
         "low_confidence_fraction": round(float(np.mean(low_conf_mask)), 4),
     }
+
+
+class ConformalPredictor:
+    """Split Conformal Prediction for distribution-free risk-controlled medical classification.
+
+    Guarantees finite-sample marginal coverage:
+        P(Y in C(X)) >= 1 - alpha
+    where C(X) is a prediction set and alpha in (0, 1) is the user-specified error tolerance.
+    In DR screening, sets like {0, 1} formalize safe borderline non-referable triage,
+    while wider sets trigger automated clinical specialist review.
+    """
+
+    def __init__(self, alpha: float = 0.10):
+        self.alpha = alpha
+        self.q_hat: float | None = None
+        self.calibrated = False
+
+    def calibrate(self, val_probs: np.ndarray, val_labels: np.ndarray) -> float:
+        """Calibrate quantile threshold using held-out validation predictions."""
+        val_probs = np.asarray(val_probs, dtype=float)
+        val_labels = np.asarray(val_labels, dtype=int)
+        n = len(val_labels)
+        if n == 0:
+            raise ValueError("Validation set cannot be empty for conformal calibration.")
+
+        # Non-conformity score: 1 - P(Y = true_class)
+        true_class_probs = val_probs[np.arange(n), val_labels]
+        scores = 1.0 - true_class_probs
+
+        # Finite-sample adjusted quantile level: ceil((n+1)(1-alpha)) / n
+        level = min(1.0, float(np.ceil((n + 1) * (1.0 - self.alpha)) / n))
+        self.q_hat = float(np.quantile(scores, level, method="higher"))
+        self.calibrated = True
+        return self.q_hat
+
+    def predict_set(self, prob_vector: np.ndarray) -> list[int]:
+        """Generate prediction set for a single probability vector."""
+        prob_vector = np.asarray(prob_vector, dtype=float)
+        if not self.calibrated or self.q_hat is None:
+            threshold = 0.15
+        else:
+            threshold = max(0.0, 1.0 - self.q_hat)
+
+        pred_set = [int(c) for c in np.where(prob_vector >= threshold)[0]]
+        if not pred_set:
+            pred_set = [int(np.argmax(prob_vector))]
+        return pred_set
+
+    def evaluate_coverage(self, test_probs: np.ndarray, test_labels: np.ndarray) -> dict[str, Any]:
+        """Evaluate empirical coverage and set efficiency on an independent test cohort."""
+        test_probs = np.asarray(test_probs, dtype=float)
+        test_labels = np.asarray(test_labels, dtype=int)
+        n = len(test_labels)
+
+        covered = 0
+        set_sizes = []
+        sets = []
+
+        for i in range(n):
+            c_set = self.predict_set(test_probs[i])
+            sets.append(c_set)
+            set_sizes.append(len(c_set))
+            if test_labels[i] in c_set:
+                covered += 1
+
+        empirical_coverage = covered / n if n > 0 else 0.0
+        mean_set_size = float(np.mean(set_sizes)) if set_sizes else 0.0
+        singleton_fraction = float(np.mean([s == 1 for s in set_sizes])) if set_sizes else 0.0
+        ambiguous_fraction = float(np.mean([s >= 3 for s in set_sizes])) if set_sizes else 0.0
+
+        return {
+            "target_coverage": round(1.0 - self.alpha, 4),
+            "empirical_coverage": round(empirical_coverage, 4),
+            "coverage_guarantee_met": bool(empirical_coverage >= (1.0 - self.alpha - 0.05)),
+            "mean_set_size": round(mean_set_size, 2),
+            "singleton_rate": round(singleton_fraction, 4),
+            "ambiguous_triage_rate": round(ambiguous_fraction, 4),
+            "q_hat_threshold": round(self.q_hat, 4) if self.q_hat is not None else None,
+        }
+

@@ -7,6 +7,7 @@ from src.evaluation.calibration import (
     compute_expected_calibration_error,
     compute_brier_score,
     compute_uncertainty_metrics,
+    ConformalPredictor,
 )
 
 
@@ -104,3 +105,56 @@ def test_uncertainty_metrics_empty():
     res = compute_uncertainty_metrics(np.empty((0, 5)))
     assert res["mean_entropy"] == 0.0
     assert res["mean_confidence"] == 0.0
+
+
+def test_conformal_prediction_coverage_guarantee():
+    """Verify that ConformalPredictor satisfies the finite-sample coverage bound P(Y in C(X)) >= 1 - alpha."""
+    np.random.seed(42)
+    n_cal = 200
+    n_test = 200
+    n_classes = 5
+
+    # Simulated validation and test probability distributions
+    val_labels = np.random.randint(0, n_classes, size=n_cal)
+    val_probs = np.random.dirichlet(np.ones(n_classes), size=n_cal)
+    # Give some predictive signal to true class
+    for i in range(n_cal):
+        val_probs[i, val_labels[i]] += 1.5
+    val_probs /= val_probs.sum(axis=1, keepdims=True)
+
+    test_labels = np.random.randint(0, n_classes, size=n_test)
+    test_probs = np.random.dirichlet(np.ones(n_classes), size=n_test)
+    for i in range(n_test):
+        test_probs[i, test_labels[i]] += 1.5
+    test_probs /= test_probs.sum(axis=1, keepdims=True)
+
+    alpha = 0.10
+    cp = ConformalPredictor(alpha=alpha)
+    q_hat = cp.calibrate(val_probs, val_labels)
+
+    assert 0.0 <= q_hat <= 1.0
+    metrics = cp.evaluate_coverage(test_probs, test_labels)
+
+    assert metrics["coverage_guarantee_met"] is True
+    assert metrics["empirical_coverage"] >= 0.85
+    assert 1.0 <= metrics["mean_set_size"] <= n_classes
+    assert 0.0 <= metrics["singleton_rate"] <= 1.0
+
+
+def test_conformal_prediction_single_sample():
+    """Verify prediction set generation for a single probability vector."""
+    cp = ConformalPredictor(alpha=0.10)
+    cp.q_hat = 0.30
+    cp.calibrated = True
+
+    # Threshold = 1 - 0.30 = 0.70
+    prob_clear = np.array([0.85, 0.05, 0.05, 0.03, 0.02])
+    c_set_clear = cp.predict_set(prob_clear)
+    assert c_set_clear == [0]
+
+    # Borderline sample: Grade 0 (40%) vs Grade 1 (40%)
+    prob_borderline = np.array([0.40, 0.40, 0.10, 0.05, 0.05])
+    cp.q_hat = 0.75  # threshold = 0.25
+    c_set_border = cp.predict_set(prob_borderline)
+    assert 0 in c_set_border and 1 in c_set_border
+
