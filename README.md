@@ -4,7 +4,7 @@
 
 [![Python Version](https://img.shields.io/badge/Python-3.10%20%7C%203.11%20%7C%203.12-blue?logo=python)](https://www.python.org/)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-EE4C2C?logo=pytorch&logoColor=white)](https://pytorch.org/)
-[![Tests](https://img.shields.io/badge/Tests-115%2F115%20Passed-brightgreen?logo=pytest)](file:///d:/Mini-project/RetinaGuard/tests)
+[![Tests](https://img.shields.io/badge/Tests-141%2F141%20Passed-brightgreen?logo=pytest)](file:///d:/Mini-project/RetinaGuard/tests)
 [![Clinical Cohorts](https://img.shields.io/badge/Evaluated%20Cohorts-5%20Cohorts%20(IDRiD%2C%20APTOS%2C%20DDR%2C%20EyePACS%2C%20Messidor--2)-orange)](file:///d:/Mini-project/RetinaGuard/data)
 [![License](https://img.shields.io/badge/License-MIT%20%2F%20Research-purple)](#license)
 [![Paper PDF](https://img.shields.io/badge/Paper-IEEE%20PDF-red?logo=adobeacrobatreader)](file:///d:/Mini-project/RetinaGuard/docs/RetinaGuard_IEEE_Paper.pdf)

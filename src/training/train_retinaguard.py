@@ -36,6 +36,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 from src.models.retinaguard import RetinaGuardModel
 from src.models.lesion_guided import compute_lesion_loss
 from src.models.causal_disentangler import compute_covariance_penalty
+from src.training.clinical_cost import AsymmetricClinicalCostLoss
 from src.evaluation.metrics import compute_dr_metrics, format_metrics_report
 from src.utils.logging import get_logger
 from src.utils.reproducibility import set_seed, get_device
@@ -121,6 +122,7 @@ class RetinaGuardTrainer:
         lambda_domain: float = 0.5,
         lambda_adv: float = 0.2,
         lambda_cov: float = 0.05,
+        lambda_cost: float = 0.0,
         lr: float = 0.0002,
         weight_decay: float = 0.0001,
         seed: int = 42,
@@ -131,7 +133,9 @@ class RetinaGuardTrainer:
         self.lambda_domain = lambda_domain
         self.lambda_adv = lambda_adv
         self.lambda_cov = lambda_cov
+        self.lambda_cost = lambda_cost
         self.class_weights: Optional[torch.Tensor] = None
+        self.clinical_cost_loss = AsymmetricClinicalCostLoss().to(self.device) if lambda_cost and lambda_cost > 0 else None
 
         self.model = RetinaGuardModel(
             architecture=architecture,
@@ -175,13 +179,17 @@ class RetinaGuardTrainer:
         cur_lambda_adv: float,
         cur_lambda_cov: float,
         cur_lambda_domain: float,
+        cur_lambda_cost: float | None = None,
     ) -> dict[str, float]:
+        if cur_lambda_cost is None:
+            cur_lambda_cost = self.lambda_cost
         self.model.train()
         total_loss = 0.0
         disease_loss_sum = 0.0
         lesion_loss_sum = 0.0
         domain_loss_sum = 0.0
         cov_loss_sum = 0.0
+        cost_loss_sum = 0.0
 
         for batch in loader:
             images = batch["image"].to(self.device)
@@ -210,6 +218,12 @@ class RetinaGuardTrainer:
             # 5. Independence covariance penalty
             loss_cov = compute_covariance_penalty(out["z_disease"], out["z_domain"])
 
+            # 6. Asymmetric clinical cost (patient-safety) loss
+            if self.clinical_cost_loss is not None and cur_lambda_cost and cur_lambda_cost > 0:
+                loss_cost = self.clinical_cost_loss(out["disease_logits"], dr_grades)
+            else:
+                loss_cost = torch.tensor(0.0, device=self.device)
+
             # Total joint loss with warmup scaling
             loss = (
                 loss_disease
@@ -217,6 +231,7 @@ class RetinaGuardTrainer:
                 + cur_lambda_domain * loss_domain
                 + cur_lambda_adv * loss_adv
                 + cur_lambda_cov * loss_cov
+                + cur_lambda_cost * loss_cost
             )
 
             loss.backward()
@@ -229,6 +244,7 @@ class RetinaGuardTrainer:
             lesion_loss_sum += loss_lesion.item() * batch_size
             domain_loss_sum += loss_domain.item() * batch_size
             cov_loss_sum += loss_cov.item() * batch_size
+            cost_loss_sum += float(loss_cost.item()) * batch_size if torch.is_tensor(loss_cost) else 0.0
 
         n = len(loader.dataset)
         return {
@@ -237,6 +253,7 @@ class RetinaGuardTrainer:
             "lesion_loss": lesion_loss_sum / n,
             "domain_loss": domain_loss_sum / n,
             "cov_loss": cov_loss_sum / n,
+            "cost_loss": cost_loss_sum / n,
         }
 
     @torch.no_grad()

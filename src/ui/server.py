@@ -337,8 +337,8 @@ class RetinaGuardRequestHandler(SimpleHTTPRequestHandler):
                 "baseline_loaded": ENGINE.baseline_model is not None,
                 "conformal_calibrated": ENGINE.conformal_predictor.calibrated,
                 "conformal_target_coverage": 0.90,
-                "version": "1.1.0",
-                "test_suite": "120/120 passing",
+                "version": "1.2.0",
+                "test_suite": "141/141 passing",
             })
             return
 
