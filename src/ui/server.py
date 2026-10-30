@@ -302,7 +302,7 @@ class RetinaGuardRequestHandler(SimpleHTTPRequestHandler):
                 "retinaguard_loaded": ENGINE.retinaguard_model is not None,
                 "baseline_loaded": ENGINE.baseline_model is not None,
                 "version": "1.0.0",
-                "test_suite": "27/27 passing",
+                "test_suite": "115/115 passing",
             })
             return
 
