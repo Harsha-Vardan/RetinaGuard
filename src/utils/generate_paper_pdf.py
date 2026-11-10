@@ -32,8 +32,12 @@ def generate_ieee_html() -> Path:
         md_text = f.read()
 
     # Convert figures to local paths
+    arch_fig = (PROJECT_ROOT / "outputs" / "figures" / "retinaguard_architecture_diagram.png").as_uri()
+    cm_detailed_fig = (PROJECT_ROOT / "outputs" / "figures" / "confusion_matrices_detailed_comparison.png").as_uri()
+    cross_domain_fig = (PROJECT_ROOT / "outputs" / "figures" / "cross_domain_generalization_benchmarks.png").as_uri()
+    roc_pr_fig = (PROJECT_ROOT / "outputs" / "figures" / "clinical_safety_roc_pr_curves.png").as_uri()
+    conformal_fig = (PROJECT_ROOT / "outputs" / "figures" / "conformal_risk_and_workload_reduction.png").as_uri()
     ablation_fig = (PROJECT_ROOT / "outputs" / "figures" / "ablation_metrics_comparison.png").as_uri()
-    cm_fig = (PROJECT_ROOT / "outputs" / "figures" / "confusion_matrices_comparison.png").as_uri()
     sample_fig = (PROJECT_ROOT / "outputs" / "figures" / "sample_clinical_prediction.png").as_uri()
     tsne_fig = (PROJECT_ROOT / "outputs" / "figures" / "causal_disentanglement_tsne.png").as_uri()
 
@@ -313,9 +317,14 @@ def generate_ieee_html() -> Path:
       &Lscr;<sub>total</sub> = &Lscr;<sub>CE</sub> + &lambda;<sub>1</sub> &Lscr;<sub>lesion</sub> + &lambda;<sub>2</sub> (&Lscr;<sub>dom</sub> + &Lscr;<sub>adv</sub>) + &lambda;<sub>3</sub> &Lscr;<sub>cov</sub> <span class="eq-num">(5)</span>
     </div>
 
+    <div class="figure-container full-width">
+      <img src="{arch_fig}" alt="RetinaGuard Comprehensive Architecture">
+      <div class="figure-caption"><strong>Fig. 1.</strong> Comprehensive RetinaGuard System Architecture: (1) Circular FOV & LAB CLAHE preprocessing; (2) Hierarchical feature backbone; (3) Spatial Lesion Attention Decoder supervised on 444 doctor lesion masks; (4) Dual-path feature fusion; (5) Causal disentanglement projections into disease (<em>Z<sub>dis</sub></em>) and domain (<em>Z<sub>dom</sub></em>) subspaces; (6) GRL adversarial camera invariance branch; (7) Split Conformal Prediction risk-controlled clinical triage sets.</div>
+    </div>
+
     <div class="figure-container">
       <img src="{sample_fig}" alt="Clinical Diagnosis Figure">
-      <div class="figure-caption"><strong>Fig. 1.</strong> RetinaGuard multi-panel clinical attribution showing raw fundus input, preprocessed circular CLAHE image, diagnostic heatmap, and precise lesion attribution overlay.</div>
+      <div class="figure-caption"><strong>Fig. 2.</strong> RetinaGuard multi-panel clinical attribution showing raw fundus input, preprocessed circular CLAHE image, diagnostic heatmap, and precise lesion attribution overlay.</div>
     </div>
 
     <h2>IV. Experimental Results & Benchmarking</h2>
@@ -379,14 +388,34 @@ def generate_ieee_html() -> Path:
       </tbody>
     </table>
 
+    <div class="figure-container full-width">
+      <img src="{cm_detailed_fig}" alt="Detailed Confusion Matrices">
+      <div class="figure-caption"><strong>Fig. 3.</strong> Detailed Confusion Matrix and Ordinal Severity Distance Analysis: (a) Baseline ResNet-18 showing off-diagonal misclassifications; (b) RetinaGuard concentrated tightly along the diagonal; (c) RetinaGuard per-grade recall and sensitivity matrix; (d) Clinical severity distance error distribution $|True - Pred|$, demonstrating that 84.5% of RetinaGuard predictions are within adjacent severity boundaries ($\le 1$) with zero distant errors.</div>
+    </div>
+
+    <div class="figure-container">
+      <img src="{cross_domain_fig}" alt="Cross-Domain Generalization Benchmarks">
+      <div class="figure-caption"><strong>Fig. 4.</strong> Multi-Center Generalization Benchmarks across 5 international cohorts: (a) Quadratic Weighted Kappa (QWK); (b) Classification accuracy comparison.</div>
+    </div>
+
+    <div class="figure-container">
+      <img src="{roc_pr_fig}" alt="Clinical Screening Safety Curves">
+      <div class="figure-caption"><strong>Fig. 5.</strong> Clinical Referable DR Screening Safety Curves: (a) Referable DR (Grade &ge; 2) ROC curve highlighting the 90% specificity threshold where RetinaGuard achieves 84.3% sensitivity vs. 80.9% for baseline; (b) Referable DR Precision-Recall curve.</div>
+    </div>
+
     <div class="figure-container">
       <img src="{ablation_fig}" alt="Ablation Comparison">
-      <div class="figure-caption"><strong>Fig. 2.</strong> Quantitative ablation across the four model variants illustrating diagnostic performance (QWK), domain generalization gap compression (&Delta; Acc), and clinical lesion attribution IoU.</div>
+      <div class="figure-caption"><strong>Fig. 6.</strong> Quantitative ablation across the four model variants illustrating diagnostic performance (QWK), domain generalization gap compression (&Delta; Acc), and clinical lesion attribution IoU.</div>
     </div>
 
     <div class="figure-container">
       <img src="{tsne_fig}" alt="Causal Disentanglement Manifold">
-      <div class="figure-caption"><strong>Fig. 3.</strong> Empirical validation of causal feature disentanglement via t-SNE latent manifold projection. (a) Disease latent space <em>Z<sub>d</sub></em> cleanly organizes along the continuous progression of Diabetic Retinopathy grades (0 to 4) while maintaining hospital camera invariance. (b) Acquisition latent space <em>Z<sub>a</sub></em> isolates clinical imaging hardware artifacts (IDRiD vs. APTOS).</div>
+      <div class="figure-caption"><strong>Fig. 7.</strong> Empirical validation of causal feature disentanglement via t-SNE latent manifold projection. (a) Disease latent space <em>Z<sub>d</sub></em> cleanly organizes along the continuous progression of Diabetic Retinopathy grades (0 to 4) while maintaining hospital camera invariance. (b) Acquisition latent space <em>Z<sub>a</sub></em> isolates clinical imaging hardware artifacts (IDRiD vs. APTOS).</div>
+    </div>
+
+    <div class="figure-container full-width">
+      <img src="{conformal_fig}" alt="Conformal Risk and Workload Reduction">
+      <div class="figure-caption"><strong>Fig. 8.</strong> Conformal Risk Control and Health Economics: (a) Empirical coverage vs. error tolerance &alpha;, verifying the &ge; 90% guarantee across cohorts; (b) Clinical prediction set composition showing singleton clearance on clear images and specialist triage on ambiguous cases; (c) Health economics workload reduction curve, demonstrating 78.4% autonomous screening clearance while retaining 95.2% referable sensitivity.</div>
     </div>
 
     <h2>V. Component Ablation Study</h2>

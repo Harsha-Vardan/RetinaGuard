@@ -376,3 +376,4 @@ Prepare these exact answers for your professor during your review:
 
 ### Q5: "How does RetinaGuard differentiate from classical domain adaptation like DANN?"
 > **Your Answer**: *"DANN applies adversarial alignment to the entire global feature vector. In retinal fundus photography, pathological lesions occupy less than 0.05% of image pixels, while 99.9% is background retinal pigment and camera illumination. Global feature alignment washes out subtle microaneurysms. RetinaGuard solves this by structurally separating representations into disease-causal latent Z_disease and domain-shortcut latent Z_domain. GRL adversarial invariance and covariance penalties (Z_dis ⟂ Z_dom) are applied to purge camera shortcuts without destroying the localized lesion-attended features."*
+
