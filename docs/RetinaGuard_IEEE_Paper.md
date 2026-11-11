@@ -1,8 +1,8 @@
 # RetinaGuard: Lesion-Guided, Causally Informed Representation Learning for Domain-Robust Diabetic Retinopathy Diagnosis
 
-**Harsha Vardan**  
+**Y. Mahesh, B. Harsha Vardan, E. Hari Teja**  
 *Department of Computer Science and Engineering*  
-*Specialization in Medical Machine Learning & Computer Vision*  
+*Indian Institute of Information Technology Dharwad (IIIT Dharwad)*  
 *October 2026*  
 
 ---

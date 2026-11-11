@@ -1,7 +1,7 @@
 # RetinaGuard: Project Master Technical Reference & Defense Guide
 
 **Project Title**: RetinaGuard: Lesion-Guided, Causally Informed Representation Learning for Robust Diabetic Retinopathy Diagnosis  
-**Author**: Harsha Vardan  
+**Authors**: Y. Mahesh, B. Harsha Vardan, E. Hari Teja (IIIT Dharwad)  
 **Target Venue**: IEEE Transactions on Medical Imaging (TMI) / Medical Image Analysis (MedIA)  
 **Date**: October 2026  
 **Primary Repository**: `https://github.com/Harsha-Vardan/RetinaGuard.git`  

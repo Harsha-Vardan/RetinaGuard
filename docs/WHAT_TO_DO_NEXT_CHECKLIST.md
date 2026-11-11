@@ -1,7 +1,7 @@
 # RetinaGuard — What More Should You Do: Action Plan & Submission Guide
 
 **Project Title**: RetinaGuard: Lesion-Guided, Causally Informed Representation Learning for Robust Diabetic Retinopathy Diagnosis  
-**Author**: Harsha Vardan  
+**Authors**: Y. Mahesh, B. Harsha Vardan, E. Hari Teja (IIIT Dharwad)  
 **Date**: October 2026  
 **Document Purpose**: A comprehensive, step-by-step roadmap detailing exactly what you should do next to achieve the highest marks from your professor, ace your oral defense/viva, submit the research paper, and explore optional high-distinction extensions.
 

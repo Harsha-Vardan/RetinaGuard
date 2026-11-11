@@ -2,7 +2,7 @@
 
 **Document Type**: Academic Literature Review (2+ Pages / ~2,500 Words)  
 **Project**: RetinaGuard: Lesion-Guided, Causally Informed Representation Learning for Diabetic Retinopathy  
-**Author**: Harsha Vardan  
+**Authors**: Y. Mahesh, B. Harsha Vardan, E. Hari Teja (IIIT Dharwad)  
 **Target Venue**: IEEE Transactions on Medical Imaging (IEEE TMI) / Medical Image Analysis (MedIA)  
 **Date**: November 2026  
 
@@ -284,3 +284,4 @@ A critical analysis of the past decade of diabetic retinopathy literature expose
 36. Vovk, V., Gammerman, A., & Shafer, G. *Algorithmic Learning in a Random World*. Springer, 2005.
 37. Angelopoulos, A. N., & Bates, S. "A Gentle Introduction to Conformal Prediction and Distribution-Free Uncertainty Quantification." *arXiv:2107.07511*, 2021.
 38. He, K., et al. "Robust Cross-Domain Retinal Disease Diagnosis via Semi-Supervised Adaptive Invariance." *Medical Image Analysis*, 93:103088, 2024.
+
